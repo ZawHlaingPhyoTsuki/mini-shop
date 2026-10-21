@@ -1,0 +1,3 @@
+{
+  "extends": "@mini-shop/config/tsconfig.base.json"
+}
