@@ -1,16 +1,16 @@
 # mini-shop
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Start, Self, and more.
+A fullstack shop built with [TanStack Start](https://tanstack.com/start), TanStack Router, Tailwind CSS, shadcn/ui, Better Auth and Drizzle ORM on PostgreSQL.
 
 ## Features
 
 - **TypeScript** - For type safety and improved developer experience
 - **TanStack Start** - SSR framework with TanStack Router
 - **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
+- **shadcn/ui** - UI primitives live in `src/components/ui`
 - **Drizzle** - TypeScript-first ORM
 - **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
+- **Authentication** - Better Auth
 - **Oxlint** - Oxlint + Oxfmt (linting & formatting)
 
 ## Getting Started
@@ -26,7 +26,7 @@ bun install
 This project uses PostgreSQL with Drizzle ORM.
 
 1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/web/.env` file with your PostgreSQL connection details.
+2. Update your `.env` file with your PostgreSQL connection details.
 
 3. Apply the schema to your database:
 
@@ -44,52 +44,46 @@ Open [http://localhost:3001](http://localhost:3001) in your browser to see the f
 
 ## UI Customization
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+shadcn/ui primitives live next to your app code.
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
+- Change design tokens and global styles in `src/styles/globals.css`
+- Update shared primitives in `src/components/ui/*`
+- Adjust shadcn aliases or style config in `components.json`
 
-### Add more shared components
+### Add more components
 
-Run this from the project root to add more primitives to the shared UI package:
+Run this from the project root to add more primitives:
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+npx shadcn@latest add accordion dialog popover sheet table
 ```
 
-Import shared components like this:
+Import them like this:
 
 ```tsx
-import { Button } from "@mini-shop/ui/components/button";
+import { Button } from "@/components/ui/button";
 ```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
 
 ## Environment Configuration
 
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
+The app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
 
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
+Import the generated `ENV` accessor in application code. Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
 
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
+Run standalone Node/Bun tools that use Varlock from the project root so they load the app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
 
 ## Deployment
 
 ### Docker Compose
 
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
+- Target: web
+- Config: `docker-compose.yml` (`Dockerfile` at the project root)
 - Build images: bun run docker:build
 - Start: bun run docker:up
 - Logs: bun run docker:logs
 - Stop: bun run docker:down
 
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
+Environment variables are read from the `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
 
 For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
 
@@ -101,20 +95,31 @@ For more details, see the guide on [Deploying with Docker Compose](https://www.b
 
 ```
 mini-shop/
-├── apps/
-│   └── web/         # Fullstack application (React + TanStack Start)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+├── src/
+│   ├── components/
+│   │   ├── ui/          # shadcn/ui primitives
+│   │   └── *            # app components (header, sign-in form, ...)
+│   ├── db/              # Drizzle schema, relations and client
+│   ├── functions/       # Server functions
+│   ├── hooks/
+│   ├── lib/             # auth, auth-client, utils
+│   ├── middleware/      # Route middleware
+│   ├── routes/          # TanStack Router file-based routes
+│   ├── styles/          # Global CSS / design tokens
+│   ├── env.ts           # Generated by Varlock
+│   └── services.ts      # db + auth instances
+├── public/
+├── drizzle.config.ts
+├── vite.config.ts
+└── components.json
 ```
 
 ## Available Scripts
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run check-types`: Check TypeScript types across all apps
+- `bun run dev`: Start the development server
+- `bun run build`: Build the application for production
+- `bun run serve`: Preview the production build
+- `bun run check-types`: Check TypeScript types
 - `bun run db:push`: Push schema changes to database
 - `bun run db:generate`: Generate database client/types
 - `bun run db:migrate`: Run database migrations
@@ -127,4 +132,4 @@ mini-shop/
 
 ## Better Auth Schema Generation
 
-After changing auth plugins or schema options, run `bun run auth:generate` from the project root. The script runs the Better Auth CLI through `varlock run` from the owning app directory, loading the auth instance from `src/services.ts`. Review the schema changes, then use your ORM's migration workflow to apply them.
+After changing auth plugins or schema options, run `bun run auth:generate` from the project root. The script runs the Better Auth CLI through `varlock run`, loading the auth instance from `src/services.ts`. Review the schema changes, then use your ORM's migration workflow to apply them.

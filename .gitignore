@@ -7,15 +7,23 @@ node_modules
 dist
 build
 *.tsbuildinfo
+.vinxi
+.output
+.react-router/
+.tanstack/
+.nitro/
 
 # Generated files
-apps/web/src/routeTree.gen.ts
+src/routeTree.gen.ts
+src/env.ts
 local.db
 local.db-*
 
 # Environment variables
 .env
-.env*.local
+.env*
+!.env.example
+!.env.schema
 
 # IDEs and editors
 .vscode/*

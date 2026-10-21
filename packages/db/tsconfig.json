@@ -1,6 +1,0 @@
-{
-  "extends": "@mini-shop/config/tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true
-  }
-}
