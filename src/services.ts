@@ -1,3 +1,5 @@
+import "varlock/auto-load";
+
 import { createDb } from "@/db";
 import { createAuth } from "@/lib/auth";
 

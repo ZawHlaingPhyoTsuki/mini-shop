@@ -16,6 +16,7 @@ build
 # Generated files
 src/routeTree.gen.ts
 src/env.ts
+src/generated/prisma
 local.db
 local.db-*
 
@@ -64,3 +65,4 @@ coverage
 .cache
 tmp
 temp
+.neon

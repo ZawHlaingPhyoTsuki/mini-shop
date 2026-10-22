@@ -1,25 +1,45 @@
-import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 import type { Database } from "@/db";
-import * as schema from "@/db/schema/auth";
 
 export type AuthConfig = {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
 };
 
+/**
+ * Extracts the host used by Better Auth for origin checks.
+ *
+ * @param url Public application URL.
+ * @returns The URL host, including a non-default port when present.
+ */
+function authHost(url: string) {
+  return new URL(url).host;
+}
+
+/**
+ * Creates the Better Auth instance with the Prisma adapter and TanStack Start
+ * cookie handling.
+ *
+ * @param env Server-only auth configuration.
+ * @param database Prisma client used by the adapter.
+ * @returns The configured Better Auth instance.
+ */
 export function createAuth(env: AuthConfig, database: Database) {
+  const allowedHosts = [authHost(env.BETTER_AUTH_URL), "localhost:3001", "*.vercel.app"];
+
   return betterAuth({
-    database: drizzleAdapter(database, {
-      provider: "pg",
-      schema,
-    }),
-    trustedOrigins: [env.BETTER_AUTH_URL],
+    database: prismaAdapter(database, { provider: "postgresql" }),
     emailAndPassword: { enabled: true },
     secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL,
+    baseURL: {
+      allowedHosts,
+      fallback: env.BETTER_AUTH_URL,
+      protocol: "auto",
+    },
+    advanced: process.env.VERCEL ? { trustedProxyHeaders: true } : undefined,
     plugins: [tanstackStartCookies()],
   });
 }
