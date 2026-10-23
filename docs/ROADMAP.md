@@ -4,7 +4,7 @@ This roadmap prioritizes a working product-discovery and COD workflow before adv
 
 ## Phase 0 — Foundation
 
-- [x] Confirm TanStack Start runtime/deployment adapter (Vercel + Nitro).
+- [x] Confirm the Next.js web / NestJS API boundary and deployment topology.
 - [x] Confirm Prisma 7 schema and migration workflow.
 - [x] Configure Neon Postgres for local, preview, and production environments.
 - [x] Configure Better Auth and verify session handling.

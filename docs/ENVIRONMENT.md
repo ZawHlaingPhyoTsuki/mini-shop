@@ -45,16 +45,16 @@ The local environment uses:
 | `SEED_ALLOW_PRODUCTION` | Set to `1` to allow seeding production      |
 | `SHADOW_DATABASE_URL`   | Local Postgres used as the Prisma shadow DB |
 
-## Vercel
+## Deployment topology
 
-- Framework: TanStack Start via Nitro, Node.js runtime.
-- Install/build: Bun with the committed `bun.lock`.
-- Vercel Production environment → Neon `production` branch.
-- Vercel Preview environment → Neon `dev` branch.
-- Runtime uses the pooled `DATABASE_URL` and an attached `pg` pool. Do not put
-  `attachDatabasePool` behind browser code.
-- Run migrations manually against the intended Neon branch with
-  `DATABASE_URL_UNPOOLED`; do not run them from the Vercel build.
+- `apps/web` is the Next.js application; configure its server-only `SERVER_URL`
+  to the NestJS API base URL.
+- `apps/server` is the NestJS API; keep `DATABASE_URL`, Better Auth secrets,
+  and S3 credentials there only.
+- The web app's Better Auth proxy is intentionally limited to `/api/auth/*` so
+  browser cookies remain first-party. It is not a marketplace API.
+- Run migrations from `apps/server` against the intended Neon branch. Do not
+  run them from a web build.
 
 Set `BETTER_AUTH_URL` to the canonical production URL. Better Auth also accepts
 `*.vercel.app` preview hosts and `localhost:3001`. Add a custom production

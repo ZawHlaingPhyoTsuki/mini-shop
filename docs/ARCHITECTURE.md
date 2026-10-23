@@ -2,7 +2,9 @@
 
 ## 1. Architectural style
 
-Use a modular monolith: one TanStack Start application, one primary Postgres database, and one S3-compatible object store. Keep domain boundaries clear without introducing separate services prematurely.
+Use a two-application modular monolith: a Next.js web application in `apps/web`, a NestJS API in `apps/server`, one primary Postgres database, and one S3-compatible object store. Keep domain boundaries clear without introducing additional services prematurely.
+
+`apps/server` owns the application API, Better Auth instance, Prisma access, authorization, business rules, and storage credentials. `apps/web` owns presentation and consumes that API. Do not implement marketplace endpoints as Next.js route handlers. The existing `apps/web/src/app/api/auth/[...path]/route.ts` route is an intentionally narrow same-origin proxy for Better Auth cookies, not a second API.
 
 ## 2. Logical modules
 
@@ -59,32 +61,30 @@ Use a modular monolith: one TanStack Start application, one primary Postgres dat
 
 ### Code layout
 
-The folder map and the rules for placing new code are in
-[docs/FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md). The short version: pure
-business rules live in `src/domain`, infrastructure wrappers in `src/lib`,
-database access in `src/db`, HTTP endpoints in `src/routes`, and server
-functions in `src/functions`.
+NestJS feature modules, controllers, DTOs, services, authorization guards,
+Prisma access, and storage operations live in `apps/server/src`; pages,
+components, forms, and API transport code live in `apps/web/src`.
 
 ## 3. Request flow
 
 Typical read:
 
-1. Browser navigates to a typed TanStack route.
-2. Route validates parameters and search parameters.
-3. Route loader or server function requests the required domain data.
-4. Domain/data-access code queries Postgres through Prisma.
+1. Browser navigates to a Next.js route.
+2. A Server Component or client-side data layer requests the NestJS API.
+3. The NestJS controller validates request input and resolves the actor when required.
+4. A feature service applies authorization and business rules, then uses Prisma.
 5. Public queries apply publication and moderation constraints.
-6. UI renders loading, empty, error, and success states.
+6. The web app renders loading, empty, error, and success states.
 
 Typical mutation:
 
-1. Browser submits a form or calls a server function.
-2. Server validates payload using Zod.
-3. Server resolves the authenticated actor where required.
-4. Domain logic checks authorization and business invariants.
+1. Browser submits a web form.
+2. The web app sends the request to the NestJS API.
+3. NestJS validates the payload using Zod or a DTO validation pipe and resolves the authenticated actor where required.
+4. The feature service checks authorization and business invariants.
 5. Prisma performs the mutation, using a transaction when multiple writes must remain consistent.
-6. The response returns only the data the caller is permitted to see.
-7. The UI updates or invalidates affected data.
+6. The API returns only data the caller is permitted to see.
+7. The web UI refreshes or invalidates affected data.
 
 Treat all browser input as untrusted, including IDs, prices, currencies, status
 values, file keys, and totals.
@@ -96,8 +96,9 @@ values, file keys, and totals.
 - The server validates the currency and recalculates totals; it never derives a
   price from a client-supplied amount or exchange rate.
 - One order uses one currency. Mixing currencies inside an order is rejected.
-- User-facing names are localized maps. English is required and is the fallback.
-  The read path resolves the requested locale without changing stored data.
+- The current schema stores English/Myanmar fields explicitly. English is the
+  fallback where a localized field exists; adding a locale requires a schema
+  migration.
 - Format money and resolve display names only at the UI boundary.
 
 ## 5. Route groups (suggested)

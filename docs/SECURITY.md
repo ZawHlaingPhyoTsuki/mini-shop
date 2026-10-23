@@ -18,7 +18,7 @@ Implemented guards: `isAdmin` / `requireAdmin` read the global Better Auth role
 (`admin` or `customer`), while `isShopOwner` / `requireShopOwner` check the
 `Shop.ownerUserId` relationship. Shop review and other platform moderation use
 `requireAdmin`; owning a shop never satisfies an admin check. Admin route
-guards are UX only, so every server function repeats the check.
+guards in the web app are UX only, so the NestJS API repeats every authorization check.
 
 ## 2. Authorization matrix
 
@@ -39,7 +39,7 @@ Review guest-order verification and admin access carefully before production.
 
 ## 3. Input validation
 
-- Validate every server mutation with Zod or equivalent runtime validation.
+- Validate every NestJS API mutation with Zod or an equivalent runtime validation layer.
 - Validate IDs, slugs, quantities, prices, text lengths, image metadata, and status transitions.
 - Treat query parameters and uploaded file metadata as untrusted.
 - Use database constraints as a second line of defense.
@@ -88,7 +88,7 @@ Collect only information needed to fulfill the order. Use a non-guessable public
 - Do not log session tokens, passwords, secrets, full addresses, or full phone numbers.
 - Keep customer contact and delivery data available only to authorized fulfillment actors.
 - Define data retention and deletion policies before public launch.
-- Use secure production cookies and correct origin/CSRF protections according to Better Auth and TanStack Start deployment guidance.
+- Use secure production cookies and correct origin/CSRF protections according to Better Auth, Next.js, and NestJS deployment guidance.
 - Configure production CORS, trusted origins, HTTPS, and security headers for the actual deployment topology.
 
 ## 10. Operational safety

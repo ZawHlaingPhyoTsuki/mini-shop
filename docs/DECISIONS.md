@@ -14,7 +14,10 @@ Mini Shop organizes products and supports ordering while merchants continue to u
 
 **Status:** Accepted
 
-One TanStack Start application with clear domain modules is sufficient. Do not introduce microservices without demonstrated need.
+Use a Next.js web application and a NestJS API, with clear feature modules in
+the API. This is still a modular monolith: both applications share one product
+domain, one primary database, and no distributed domain services. Do not
+introduce additional microservices without demonstrated need.
 
 ### D-003: COD is the initial payment method
 
@@ -107,11 +110,11 @@ merchant interviews before launch.
 
 **Status:** Accepted
 
-Deploy the TanStack Start/Vite/Nitro application to Vercel. Vercel runs the
-Node.js server output; Bun is the package manager and build tool. The web app
-is not deployed through Docker. Use an explicit `pg` pool with Vercel's
-`attachDatabasePool` and the pooled `DATABASE_URL`. Vercel Preview maps to the
-Neon `dev` branch and Production maps to the `production` branch.
+Deploy the Next.js web application and NestJS API independently. The web app
+uses `SERVER_URL` to consume the API. The API owns Better Auth, Prisma, and
+storage credentials; the web app does not expose parallel marketplace endpoints
+under Next.js `/api`. The existing same-origin Better Auth proxy is allowed
+solely to keep auth cookies first-party.
 
 ### D-017: Object storage upload pattern
 
@@ -139,13 +142,10 @@ Format money only at the UI boundary.
 
 **Status:** Accepted
 
-Store user-facing names as a localized map, for example
-`{ "en": "Fashion", "my": "ဖက်ရှင်" }`, rather than separate columns for every
-locale. English is required; other locales are optional until content is ready.
-The initial build supports English and Myanmar, with Shan and at most a few more
-locales expected later. Add a locale by extending the shared locale list and
-validation; no per-locale database column is required. Read paths fall back to
-English when the requested locale is unavailable.
+The current Prisma schema stores English and Myanmar in explicit fields such as
+`nameEn` and `nameMy`. English is required where the schema requires it;
+Myanmar is optional. Adding Shan or changing to a localized map requires an
+explicit schema migration and a new recorded decision.
 
 ### D-020: Prisma 7 replaces Drizzle RC
 
@@ -198,7 +198,7 @@ either activates it or rejects it. Rejection moves the shop to `DRAFT`, stores
 `reviewNote`, `reviewedAt`, and `reviewedByUserId`, and lets the owner edit and
 resubmit. Approval stores the same audit fields and clears the note.
 
-Status changes are validated in `src/features/shops/status.ts`. Owners may only
+Status changes are validated by the NestJS shops feature. Owners may only
 move `DRAFT -> PENDING_REVIEW`; only admin review may set `ACTIVE` (or return a
 pending shop to `DRAFT`). Storefront reads require `ACTIVE`. Admin checks come
 from the global auth role, never from shop ownership.
@@ -212,11 +212,9 @@ production deployment.
 
 **Status:** Accepted
 
-Domain code is organized by feature under `src/features/<name>`. A feature owns
-its components, server functions, schemas, and rules so a change stays local;
-routes compose features and stay thin. The shop feature lives at
-`src/features/shops` (`components/`, `server.ts`, `schema.ts`, `status.ts`).
-
-`src/components`, `src/domain`, `src/functions`, and `src/lib` hold only
-cross-feature code. New domains add a sibling feature folder rather than growing
-the shared folders. Import feature modules directly; do not add barrel files.
+NestJS code is organized by feature module under `apps/server/src/modules`.
+Each module owns its controller, validated request types, service, authorization
+rules, and tests. Next.js pages and components live in `apps/web/src` and call
+the API through its transport layer. New marketplace endpoints belong to an API
+feature module, not a Next.js route handler. Import feature modules directly;
+do not add barrel files without a concrete need.

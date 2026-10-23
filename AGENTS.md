@@ -15,7 +15,6 @@ Mini Shop is a mobile-first product discovery and storefront platform for social
 - Security and authorization: `docs/SECURITY.md`
 - Object storage: `docs/STORAGE.md`
 - Scope and phases: `docs/ROADMAP.md`
-- Folder layout and code placement: `docs/FOLDER_STRUCTURE.md`
 - Recorded decisions: `docs/DECISIONS.md`
 
 If implementation and docs disagree, inspect the code, identify whether the difference is intentional, and update the relevant documentation rather than silently assuming.
@@ -24,7 +23,8 @@ If implementation and docs disagree, inspect the code, identify whether the diff
 
 Use the existing stack unless a concrete limitation justifies a change:
 
-- TanStack Start, TanStack Router, React, TypeScript, Vite
+- Next.js App Router, React, TypeScript
+- NestJS for every application API and privileged server operation
 - Prisma 7 and Neon Postgres
 - Better Auth with the Prisma adapter
 - Neon S3-compatible object storage using AWS SDK packages
@@ -46,10 +46,10 @@ Do not introduce another ORM, authentication framework, storage SDK, or routing 
 8. Use database transactions for operations that must succeed or fail together, including order creation, stock reservation/decrement, and order-item snapshots.
 9. Store money as whole integer units with an explicit currency (`MMK` and `THB` have no decimals in this market). Do not use floating-point arithmetic for money or implicit exchange-rate conversion.
 10. Use UTC timestamps in storage and format them for the user at the UI boundary.
-11. Store user-facing names as localized maps (`en`, `my`, later `shan`). English is required and is the fallback; do not add one database column per locale.
+11. Follow the current Prisma schema for localized fields: English/Myanmar are explicit columns today. Do not add a locale or change that representation without a reviewed schema migration and documentation update.
 12. Avoid leaking customer phone numbers, addresses, or order details in logs, analytics, URLs, and error messages.
 13. Use meaningful, accessible labels and keyboard support. Design mobile-first.
-14. Keep UI state and server state distinct. Use TanStack Query only where it adds value; do not add it mechanically to every loader or server function.
+14. Keep UI state and server state distinct. The Next.js web app consumes the NestJS API; do not add marketplace API routes under `apps/web/src/app/api`. The sole exception is the narrowly scoped Better Auth same-origin proxy required to keep session cookies first-party.
 15. Do not invent functionality that is not in the product scope. Ask or record a decision when behavior is ambiguous.
 16. Add or update tests for business rules, authorization, and important edge cases.
 17. Do not claim checks passed unless you ran them.

@@ -1,6 +1,8 @@
 # Data Model
 
-This document describes the intended domain model. It is not a finalized Prisma schema. Match names and types to the conventions already present in `prisma/`.
+This document describes the current domain model. The canonical source is the
+Prisma schema in `apps/server/prisma/schema/`; when this document conflicts
+with that schema, the schema wins and this document must be corrected.
 
 ## 1. Identity
 
@@ -10,7 +12,10 @@ Use the tables required by the installed Better Auth configuration and Prisma ad
 
 ### Shop membership
 
-Each user may own at most one shop, enforced by the unique `Shop.ownerUserId`. If collaboration is required, introduce `ShopMember` with `shopId`, `userId`, role, and membership status. Do not assume a user's session grants shop access. Owning a shop does not grant the global `admin` role.
+Each user has a Better Auth `role` that defaults to `customer`. Each user may
+own at most one shop, enforced by the unique `Shop.ownerUserId`. There is no
+`ShopMember` model yet. Do not assume a user's session grants shop access.
+Owning a shop does not grant the global `admin` role.
 
 ## 2. Shop
 
@@ -33,7 +38,9 @@ Implemented fields:
 Rules:
 
 - Slugs must be unique and one user may own only one shop.
-- A shop is created in `PENDING_REVIEW`; only an admin review may set `ACTIVE`.
+- The schema defaults a new shop to `DRAFT`. The NestJS onboarding flow must
+  explicitly submit it to `PENDING_REVIEW`; only an admin review may set it to
+  `ACTIVE`.
 - Rejection sets `DRAFT` plus `reviewNote`, `reviewedAt`, and `reviewedByUserId`; the owner edits and resubmits.
 - Only the owner (resolved from `ownerUserId`) may edit the shop.
 - Public storefronts require an eligible shop status.
@@ -59,16 +66,18 @@ Categories are administered by the platform, not freely created by every merchan
 
 ## 4. Product
 
-Suggested fields:
+Implemented fields:
 
 - `id`
 - `shopId`
 - `categoryId`
 - `nameEn` (required), `nameMy` (nullable)
 - `slug`
-- `description`
+- `descriptionEn`, `descriptionMy` (nullable)
 - `priceMMK` (whole Kyat), `priceTHB` (whole Baht, nullable)
-- `status` (`draft`, `published`, `archived`, `hidden`)
+- `status` (`DRAFT`, `PUBLISHED`, `ARCHIVED`, `HIDDEN`)
+- `stockQuantity` (nullable; `null` means stock is not tracked)
+- `sku` (nullable)
 - `createdAt`
 - `updatedAt`
 - `publishedAt` (nullable)
@@ -82,74 +91,66 @@ Rules:
 
 ## 5. Product images
 
-Suggested `ProductImage` fields:
+`ProductImage` links a product to an `Asset` owned by a user. Its fields are:
 
 - `id`
 - `productId`
-- `objectKey`
+- `assetId`
 - `altText`
 - `sortOrder`
 - `createdAt`
 
-Store object keys rather than binary image data or long-lived signed URLs. Product images use the `public_read` `assets` bucket; serve them from the bucket endpoint or a CDN in front of it.
+`Asset` holds the bucket, object key, content type, size, owner, and creation
+time. Store object keys rather than binary image data or long-lived signed URLs.
 
-## 6. Product variants and inventory
+## 6. Inventory and variants
 
-For products requiring variants, use `ProductVariant`:
-
-- `id`
-- `productId`
-- localized name map or structured option values (e.g. `Black / M`)
-- `sku` (optional)
-- `priceAmount` (whole integer units)
-- `currency` (`MMK` or `THB`)
-- `stockQuantity` (integer)
-- `isActive`
-- timestamps
-
-If inventory is variant-specific, stock belongs to the variant. Avoid simultaneously maintaining contradictory product-level and variant-level stock totals. Simple products can have a single default variant or a documented product-level stock representation.
+The current schema supports product-level inventory only through nullable
+`Product.stockQuantity`. It has no `ProductVariant` model. A later variants
+change must include schema, order-item snapshot, pricing, and inventory-policy
+updates together rather than assuming variant support exists.
 
 ## 7. Orders
 
-Suggested `Order` fields:
+Implemented `Order` fields include:
 
 - `id`
-- `publicReference` (non-sequential, unique)
+- `orderNumber` (unique)
 - `shopId`
-- `customerUserId` (nullable for guest checkout)
-- `customerName`
-- `customerPhone`
-- delivery address fields needed by the fulfillment workflow
+- `userId` (required)
+- recipient name, phone, country code, region, city, address lines, postal
+  code, and delivery instructions (the shipping-address snapshot)
 - `subtotalAmount`
-- `deliveryFeeAmount`
+- `shippingFee`
+- `discountAmount`
 - `totalAmount`
 - `currency` (`MMK` or `THB`)
 - `paymentMethod` (`COD`)
 - `paymentStatus` (`unpaid`, `paid`, `refunded`, `not_applicable` if needed)
-- `fulfillmentStatus` (see `ORDER_LIFECYCLE.md`)
+- `status` (`PLACED`, `CONFIRMED`, `PACKING`, `SHIPPED`, `DELIVERED`,
+  `CANCELLED`, `REJECTED`, `RETURNED`)
 - `customerNote` (nullable)
 - timestamps
 
-Consider separating sensitive delivery/contact information into a restricted table if it helps enforce access boundaries.
+The current schema requires an authenticated user for every order; guest
+checkout is not represented yet. It also uses one order status plus a separate
+payment status. Any future fulfillment/payment model revision must update the
+schema and lifecycle documentation together.
 
 ## 8. Order items
 
-Suggested `OrderItem` fields:
+Implemented `OrderItem` fields include:
 
 - `id`
 - `orderId`
 - `productId` (nullable if products may be deleted; otherwise preserve reference and archive)
-- `variantId` (nullable)
-- `productNameSnapshot` (display name in the locale used at checkout)
-- `variantNameSnapshot` (nullable)
-- `skuSnapshot` (nullable)
-- `unitPriceAmount`
+- `productNameEn`, `productNameMy`, and `productSlug` snapshots
+- `unitPrice`
 - `quantity`
-- `lineTotalAmount`
+- `lineTotal`
 
-Store money as whole integer units with an explicit currency. Recompute totals
-on the server and preserve snapshots for historical accuracy. The order and all
-of its money fields use one currency; do not mix currencies inside an order.
+Store money as whole integer units with the order's explicit currency. Recompute
+totals on the server and preserve snapshots for historical accuracy.
 
 ## 9. Favorites and likes (later)
 
@@ -202,11 +203,11 @@ Whichever policy is chosen, implement concurrency-safe updates and test simultan
 
 ### Localization
 
-- Use a localized name map (`en`, `my`, later `shan`) for categories, shops,
-  products, and variants.
-- English is required; other locales may be absent.
-- Fall back to English when a requested locale is missing.
-- Keep slugs Latin-script and locale-independent.
+The current schema uses English/Myanmar columns: `nameEn`/`nameMy` for
+categories and products, plus `descriptionEn`/`descriptionMy` for shops and
+products. English is required for category and product names; Myanmar is
+nullable. A localized JSON/map model is not implemented, so adding Shan needs
+an explicit schema decision and migration.
 
 ## 13. Indexes and constraints to consider
 

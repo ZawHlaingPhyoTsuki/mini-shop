@@ -130,7 +130,7 @@ Customer accounts, saved favorites, and convenient order history can be introduc
 
 Implemented states: `DRAFT`, `PENDING_REVIEW`, `ACTIVE`, `SUSPENDED`, `CLOSED`.
 
-Approval is mandatory for the MVP (D-022). A shop starts in `PENDING_REVIEW` when created, becomes `ACTIVE` only through an admin approval, and returns to `DRAFT` on rejection. Owners may resubmit a draft; the allowed transitions live in `src/features/shops/status.ts`.
+Approval is mandatory for the MVP (D-022). A shop starts in `PENDING_REVIEW` when created, becomes `ACTIVE` only through an admin approval, and returns to `DRAFT` on rejection. Owners may resubmit a draft; the NestJS shops module owns the allowed transitions.
 
 ### Product
 
@@ -162,6 +162,6 @@ Avoid optimizing only for registrations or raw views.
 - Merchants can access and update only their own shop's orders.
 - Fulfillment and payment statuses are distinct.
 - Invalid or unauthorized requests are rejected server-side.
-- English and Myanmar names are available; adding another locale does not require a new database column.
+- English and Myanmar names are available in the current schema. Adding another locale requires a deliberate schema migration.
 - Prices display the correct currency symbol and no decimals.
 - Basic administration and listing moderation are available before broad public launch.

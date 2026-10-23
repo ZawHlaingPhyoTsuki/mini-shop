@@ -4,23 +4,23 @@ This document records the intended stack based on the current `package.json`. Co
 
 ## Application
 
-### TanStack Start
+### Next.js App Router
 
-Provides the full-stack React application framework, integrated routing, and server-side capabilities. Keep public storefront routes and authenticated dashboard routes in the same application initially.
+Builds the web application in `apps/web`, including public storefront and
+authenticated dashboard routes. It is a presentation client for the NestJS API,
+not the owner of application business endpoints.
 
-### TanStack Router
+### NestJS
 
-Owns route definitions, route parameters, search parameters, and route-level data/loading patterns. Prefer typed route parameters and validated search parameters.
+Provides the API in `apps/server`. NestJS owns controllers, authentication
+integration, authorization guards, feature services, Prisma access, and S3
+operations. Organize API code by feature module rather than by a global
+controller or a Next.js `/api` substitute.
 
-### React + TypeScript + Vite
+### React + TypeScript
 
-Build the user interface and development/build workflow. Keep strict typing enabled and validate external data at runtime.
-
-### Nitro
-
-TanStack Start builds through Nitro and deploys to Vercel without a custom
-adapter. Vercel runs the Node.js server output; Bun installs dependencies and
-runs the build.
+Build the web UI with strict typing. Validate all external API data at the
+appropriate boundary.
 
 ## Data
 
@@ -42,9 +42,9 @@ connection; `migrate dev` also needs a shadow database.
 
 Money is stored as whole integer units plus an explicit currency. `MMK` and
 `THB` both use zero decimal places in this market. Shared Zod schemas and `Intl`
-formatting live under `src/domain/shared/`. English and Myanmar names are stored
-in localized maps; adding Shan later means extending the shared locale list, not
-adding database columns.
+formatting belongs at the web UI boundary. The current Prisma schema stores
+English/Myanmar values in explicit columns; adding Shan requires a deliberate
+schema migration.
 
 ### Database workflow
 
@@ -86,8 +86,8 @@ Do not add a second file abstraction.
 ## Forms, validation, and data fetching
 
 - **TanStack Form:** complex product, shop, and checkout forms.
-- **Zod:** validate form input and server-function payloads at runtime.
-- **TanStack Query:** use for client-side asynchronous data and cache management where it complements Start's route/server data model. Avoid duplicate fetching/caching patterns without a clear need.
+- **Zod:** validate form input and NestJS API payloads at runtime.
+- **TanStack Query:** use for client-side asynchronous API state and cache management where it adds value. Avoid duplicate fetching/caching patterns without a clear need.
 
 ## UI
 

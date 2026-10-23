@@ -5,7 +5,8 @@ current repository, not just the target architecture.
 
 ## Current state
 
-- TanStack Start, TanStack Router, React, Vite, Tailwind, and shadcn are wired up.
+- Next.js, React, Tailwind, and shadcn are wired up in `apps/web`.
+- NestJS owns the API in `apps/server`; the web app consumes it through `SERVER_URL`.
 - Better Auth uses the Prisma adapter and supports email/password sessions.
 - Prisma points at Neon Postgres; migrations use `DATABASE_URL_UNPOOLED`.
 - Neon Object Storage is configured with the AWS SDK: presigned `PUT` uploads,
@@ -37,8 +38,8 @@ See [DECISIONS.md](DECISIONS.md). Key defaults:
 - [x] Add Vitest (Node by default; jsdom per React test) and baseline tests.
 - [x] Add `bun run test` and baseline unit tests.
 - [x] Add CI for install, lint/format check, type check, and tests.
-- [x] Add shared Zod schemas for slugs, money, quantities, locales, and status
-      values under `src/domain/`.
+- [ ] Add shared validation schemas for slugs, money, quantities, locales, and status
+      values in the relevant NestJS feature modules.
 - [x] Add server-side authorization helpers for shop ownership.
 - [x] Add an idempotent category seed with a production guard.
 - [x] Replace Drizzle RC with Prisma 7 (pinned), generate the Rust-free client,
