@@ -30,7 +30,10 @@ export function MobilePublicMenu() {
       >
         <MenuIcon aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48 sm:hidden">
+      <DropdownMenuContent align="end" className="w-52 sm:hidden">
+        <DropdownMenuItem render={<Link href="/" />}>{t.nav.browse}</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/dashboard/shop" />}>{t.nav.sell}</DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/about" />}>{t.nav.about}</DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/contact" />}>{t.nav.contact}</DropdownMenuItem>
         <DropdownMenuSeparator />

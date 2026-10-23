@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Map as MapIcon } from "lucide-react";
+import { StoreIcon } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { PublicBrandLink } from "@/components/public-brand-link";
@@ -23,7 +23,17 @@ export async function PublicHeader() {
           <PublicBrandLink label={t.brand} />
         </div>
 
-        <div className="hidden items-center gap-1 sm:flex">{/* About, Contact: unchanged */}</div>
+        <div className="hidden items-center gap-1 sm:flex">
+          <Link href="/" className={linkClassName}>
+            {t.nav.browse}
+          </Link>
+          <Link href="/about" className={linkClassName}>
+            {t.nav.about}
+          </Link>
+          <Link href="/contact" className={linkClassName}>
+            {t.nav.contact}
+          </Link>
+        </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <LocaleToggle locale={locale} />
@@ -31,15 +41,15 @@ export async function PublicHeader() {
             {t.nav.login}
           </Link>
           <Link
-            href="/map"
+            href="/dashboard/shop"
             className={buttonVariants({
               size: "sm",
               className:
-                "h-10 gap-1.5 rounded-full px-3 font-semibold shadow-md shadow-primary/25 sm:px-4",
+                "h-10 gap-1.5 rounded-full px-3 font-semibold shadow-md shadow-primary/20 sm:px-4",
             })}
           >
-            <MapIcon className="size-4" aria-hidden />
-            {t.nav.map}
+            <StoreIcon className="size-4" aria-hidden />
+            {t.nav.sell}
           </Link>
           <MobilePublicMenu />
         </div>

@@ -12,7 +12,7 @@ function category(overrides: Record<string, unknown> = {}) {
     nameEn: "Cafe",
     createdAt: new Date(),
     updatedAt: new Date(),
-    _count: { places: 0 },
+    _count: { products: 0 },
     ...overrides,
   };
 }
@@ -34,12 +34,12 @@ describe("CategoriesAdminService", () => {
     vi.clearAllMocks();
   });
 
-  it("maps the place count onto each category", async () => {
+  it("maps the product count onto each category", async () => {
     const { categoryDb, service } = makeService();
-    categoryDb.findMany.mockResolvedValue([category({ _count: { places: 3 } })]);
+    categoryDb.findMany.mockResolvedValue([category({ _count: { products: 3 } })]);
 
     await expect(service.list()).resolves.toEqual([
-      expect.objectContaining({ slug: "cafe", placeCount: 3 }),
+      expect.objectContaining({ slug: "cafe", productCount: 3 }),
     ]);
   });
 
@@ -47,13 +47,15 @@ describe("CategoriesAdminService", () => {
     const { categoryDb, service } = makeService();
     categoryDb.findUnique.mockResolvedValue(category());
 
-    await expect(service.create({ slug: "cafe", nameMy: "x" })).rejects.toThrow(ConflictException);
+    await expect(service.create({ slug: "cafe", nameEn: "Cafe" })).rejects.toThrow(
+      ConflictException,
+    );
     expect(categoryDb.create).not.toHaveBeenCalled();
   });
 
-  it("rejects deleting a category that still has places", async () => {
+  it("rejects deleting a category that still has products", async () => {
     const { categoryDb, service } = makeService();
-    categoryDb.findUnique.mockResolvedValue(category({ _count: { places: 2 } }));
+    categoryDb.findUnique.mockResolvedValue(category({ _count: { products: 2 } }));
 
     await expect(service.remove("cat1")).rejects.toThrow(BadRequestException);
     expect(categoryDb.delete).not.toHaveBeenCalled();
@@ -71,6 +73,6 @@ describe("CategoriesAdminService", () => {
     const { categoryDb, service } = makeService();
     categoryDb.findUnique.mockResolvedValue(null);
 
-    await expect(service.update("missing", { nameMy: "x" })).rejects.toThrow(NotFoundException);
+    await expect(service.update("missing", { nameEn: "Cafe" })).rejects.toThrow(NotFoundException);
   });
 });

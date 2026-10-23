@@ -4,11 +4,12 @@ import { SLUG_MESSAGE, SLUG_PATTERN } from "@/lib/slug";
 
 export const categoryInputSchema = z.object({
   slug: z.string().trim().regex(SLUG_PATTERN, SLUG_MESSAGE),
-  nameMy: z.string().trim().min(1),
-  nameEn: z.string().trim().optional(),
+  nameEn: z.string().trim().min(1, "English name is required").max(120),
+  nameMy: z.string().trim().max(120).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
 });
 
-// Slug is the public filter URL (?category=cafe), so it never changes.
 export const categoryUpdateSchema = categoryInputSchema.omit({ slug: true });
 
 export type CategoryInput = z.infer<typeof categoryInputSchema>;
@@ -16,8 +17,10 @@ export type CategoryUpdate = z.infer<typeof categoryUpdateSchema>;
 
 export const categoryFormSchema = z.object({
   slug: z.string().trim().regex(SLUG_PATTERN, SLUG_MESSAGE),
-  nameMy: z.string().trim().min(1, "Enter a name in Myanmar"),
-  nameEn: z.string(),
+  nameEn: z.string().trim().min(1, "Enter a category name in English"),
+  nameMy: z.string(),
+  sortOrder: z.string(),
+  isActive: z.boolean(),
 });
 
 export type CategoryFormValues = z.infer<typeof categoryFormSchema>;

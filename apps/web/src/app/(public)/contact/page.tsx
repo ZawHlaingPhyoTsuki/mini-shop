@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
 import Link from "next/link";
-import { ArrowUpRight, Inbox, MapPin, Mail } from "lucide-react";
+import { ArrowUpRight, Inbox, Mail, Store } from "lucide-react";
 import { FacebookIcon } from "@/components/icons/facebook-icon";
 
 import { PageHeader } from "@/components/page-header";
@@ -81,14 +81,14 @@ export default async function ContactPage() {
 
         <div className="flex justify-center pt-4">
           <Link
-            href={"/map" as Route}
+            href={"/" as Route}
             className={buttonVariants({
               size: "lg",
               className: "h-12 gap-2 rounded-full px-7 font-semibold shadow-md shadow-primary/25",
             })}
           >
-            <MapPin className="size-5" aria-hidden />
-            {t.landing.browseMap}
+            <Store className="size-5" aria-hidden />
+            {t.nav.browse}
           </Link>
         </div>
       </div>

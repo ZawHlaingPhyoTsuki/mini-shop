@@ -100,7 +100,7 @@ export function AdminCategories({ initialCategories }: { initialCategories: Admi
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? t.adminCategories.editCategory(editing.nameMy)
+                ? t.adminCategories.editCategory(editing.nameEn || editing.nameMy || editing.slug)
                 : t.adminCategories.addCategory}
             </DialogTitle>
             <DialogDescription>{t.adminCategories.sheetDescription}</DialogDescription>
@@ -142,16 +142,18 @@ export function AdminCategories({ initialCategories }: { initialCategories: Admi
             >
               <ItemContent>
                 <ItemTitle>
-                  {category.nameMy}
-                  {category.nameEn ? (
-                    <span className="text-muted-foreground">{category.nameEn}</span>
+                  {category.nameEn}
+                  {category.nameMy ? (
+                    <span className="text-muted-foreground ml-2 font-normal text-xs">
+                      ({category.nameMy})
+                    </span>
                   ) : null}
                 </ItemTitle>
                 <ItemDescription>?category={category.slug}</ItemDescription>
               </ItemContent>
               <ItemActions>
                 <Badge variant="outline" className="tabular-nums">
-                  {category.placeCount} {t.adminCategories.countUnit(category.placeCount)}
+                  {category.productCount} {t.adminCategories.countUnit(category.productCount)}
                 </Badge>
                 <Button
                   size="sm"
@@ -166,8 +168,8 @@ export function AdminCategories({ initialCategories }: { initialCategories: Admi
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={category.placeCount > 0 || busy === category.id}
-                  title={category.placeCount > 0 ? t.adminCategories.moveBlocked : undefined}
+                  disabled={category.productCount > 0 || busy === category.id}
+                  title={category.productCount > 0 ? t.adminCategories.moveBlocked : undefined}
                   onClick={() => setDeleting(category.id)}
                 >
                   {busy === category.id ? t.adminCategories.deleting : t.adminCategories.delete}

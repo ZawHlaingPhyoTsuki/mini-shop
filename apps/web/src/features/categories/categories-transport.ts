@@ -13,7 +13,13 @@ export const categoriesTransport = {
     return apiRequest<AdminCategory[]>("/admin/categories", undefined, true);
   },
 
-  createCategory(input: { slug: string; nameMy: string; nameEn?: string }) {
+  createCategory(input: {
+    slug: string;
+    nameEn: string;
+    nameMy?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }) {
     return apiRequest<AdminCategory>(
       "/admin/categories",
       {
@@ -24,7 +30,15 @@ export const categoriesTransport = {
     );
   },
 
-  updateCategory(id: string, input: { nameMy: string; nameEn?: string }) {
+  updateCategory(
+    id: string,
+    input: {
+      nameEn?: string;
+      nameMy?: string;
+      sortOrder?: number;
+      isActive?: boolean;
+    },
+  ) {
     return apiRequest<AdminCategory>(
       `/admin/categories/${id}`,
       {

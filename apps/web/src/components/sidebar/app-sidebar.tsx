@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import {
-  BookOpenIcon,
+  CheckSquareIcon,
   House as IconHouse,
   LayoutDashboardIcon,
-  MapPinIcon,
-  MapPinnedIcon,
-  Search as IconSearch,
+  PackageIcon,
   Settings as IconSettings,
+  StoreIcon,
   TagIcon,
 } from "lucide-react";
 
@@ -36,31 +35,38 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const t = useDictionary();
   const { isMobile, setOpenMobile } = useSidebar();
-  const data = {
-    navMain: [
-      { title: t.dashboard.overview, url: "/dashboard", icon: <LayoutDashboardIcon /> },
-      { title: t.dashboard.places, url: "/dashboard/places", icon: <MapPinIcon /> },
-      { title: t.dashboard.categories, url: "/dashboard/categories", icon: <TagIcon /> },
-      { title: t.dashboard.areas, url: "/dashboard/areas", icon: <MapPinnedIcon /> },
-    ],
-    navSecondary: [
-      {
-        title: t.dashboard.settings,
-        url: "/dashboard/settings",
-        icon: IconSettings,
-      },
-      {
-        title: t.dashboard.goToWebsite,
-        url: "/",
-        icon: IconHouse,
-      },
-      {
-        title: t.dashboard.searchLink,
-        url: "#",
-        icon: IconSearch,
-      },
-    ],
-  };
+
+  const isAdmin = user?.role === "admin";
+
+  const navMain = [
+    { title: t.dashboard.overview, url: "/dashboard", icon: <LayoutDashboardIcon /> },
+    { title: t.dashboard.myShop, url: "/dashboard/shop", icon: <StoreIcon /> },
+    { title: t.dashboard.products, url: "/dashboard/products", icon: <PackageIcon /> },
+    ...(isAdmin
+      ? [
+          {
+            title: t.dashboard.adminShops,
+            url: "/dashboard/admin/shops",
+            icon: <CheckSquareIcon />,
+          },
+          { title: t.dashboard.categories, url: "/dashboard/categories", icon: <TagIcon /> },
+        ]
+      : []),
+  ];
+
+  const navSecondary = [
+    {
+      title: t.dashboard.settings,
+      url: "/dashboard/settings",
+      icon: IconSettings,
+    },
+    {
+      title: t.dashboard.goToWebsite,
+      url: "/",
+      icon: IconHouse,
+    },
+  ];
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -77,15 +83,15 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                 />
               }
             >
-              <BookOpenIcon className="size-5!" />
-              <span className="text-base font-semibold">{t.brand}</span>
+              <StoreIcon className="size-5! text-primary" />
+              <span className="text-base font-bold tracking-tight">{t.brand}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navMain} />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

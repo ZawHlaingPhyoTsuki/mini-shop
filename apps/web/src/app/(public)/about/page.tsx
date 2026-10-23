@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
 import Link from "next/link";
-import { ArrowRight, MapPin, MessageSquareWarning, ShieldCheck, Store } from "lucide-react";
+import { ArrowRight, MessageSquareWarning, ShieldCheck, Store } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { PublicFooter } from "@/components/public-footer";
@@ -38,7 +38,7 @@ export default async function AboutPage() {
         ))}
 
         <Link
-          href={"/contact" as Route}
+          href={"/dashboard/shop" as Route}
           className="group flex items-center gap-4 rounded-2xl border border-primary/30 bg-primary/10 p-5 transition-colors hover:bg-primary/15 sm:p-6"
         >
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
@@ -58,14 +58,14 @@ export default async function AboutPage() {
 
         <div className="flex justify-center pt-4">
           <Link
-            href={"/map" as Route}
+            href={"/" as Route}
             className={buttonVariants({
               size: "lg",
               className: "h-12 gap-2 rounded-full px-7 font-semibold shadow-md shadow-primary/25",
             })}
           >
-            <MapPin className="size-5" aria-hidden />
-            {t.landing.browseMap}
+            <Store className="size-5" aria-hidden />
+            {t.nav.browse}
           </Link>
         </div>
       </div>

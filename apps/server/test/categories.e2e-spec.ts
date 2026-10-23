@@ -15,7 +15,9 @@ describe("Categories (e2e)", () => {
 
   let admin: ReturnType<typeof authed>;
   let categoryId: string;
-  const createdPlaceIds: string[] = [];
+  let shopId: string;
+  let adminUserId: string;
+  const createdProductIds: string[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -28,13 +30,24 @@ describe("Categories (e2e)", () => {
     db = moduleFixture.get(PrismaService);
 
     const server = app.getHttpServer();
-    const userId = await signUp(server, "Categories Admin", adminEmail);
-    await db.user.update({ where: { id: userId }, data: { role: "admin" } });
+    adminUserId = await signUp(server, "Categories Admin", adminEmail);
+    await db.user.update({ where: { id: adminUserId }, data: { role: "admin" } });
     admin = authed(server, await signIn(server, adminEmail));
+
+    const shop = await db.shop.create({
+      data: {
+        name: `Admin Shop ${tag}`,
+        slug: `admin-shop-${tag}`,
+        ownerUserId: adminUserId,
+        status: "ACTIVE",
+      },
+    });
+    shopId = shop.id;
   }, 60000);
 
   afterAll(async () => {
-    await db.place.deleteMany({ where: { id: { in: createdPlaceIds } } });
+    await db.product.deleteMany({ where: { id: { in: createdProductIds } } });
+    await db.shop.deleteMany({ where: { id: shopId } });
     await db.category.deleteMany({ where: { slug: { startsWith: `test_cat_${tag}` } } });
     await db.user.deleteMany({ where: { email: adminEmail } });
     await app.close();
@@ -44,14 +57,14 @@ describe("Categories (e2e)", () => {
     await admin.post("/admin/categories").send({ slug: "Bad Slug!", nameMy: "မှားသည်" }).expect(400);
   });
 
-  it("creates a category with a place count of zero (201)", async () => {
+  it("creates a category with a product count of zero (201)", async () => {
     const res = await admin
       .post("/admin/categories")
       .send({ slug, nameMy: "စမ်းသပ်ဆိုင်", nameEn: `Test Category ${tag}` })
       .expect(201);
-    const body = res.body as { id: string; slug: string; placeCount: number };
+    const body = res.body as { id: string; slug: string; productCount: number };
     expect(body.slug).toBe(slug);
-    expect(body.placeCount).toBe(0);
+    expect(body.productCount).toBe(0);
     categoryId = body.id;
   });
 
@@ -59,13 +72,13 @@ describe("Categories (e2e)", () => {
     await admin.post("/admin/categories").send({ slug, nameMy: "ထပ်မံထည့်သည်" }).expect(409);
   });
 
-  it("lists categories with their place counts", async () => {
+  it("lists categories with their product counts", async () => {
     const res = await admin.get("/admin/categories").expect(200);
-    const found = (res.body as { slug: string; placeCount: number }[]).find(
+    const found = (res.body as { slug: string; productCount: number }[]).find(
       (category) => category.slug === slug,
     );
     expect(found).toBeDefined();
-    expect(typeof found?.placeCount).toBe("number");
+    expect(typeof found?.productCount).toBe("number");
   });
 
   it("renames a category without changing its slug", async () => {
@@ -82,17 +95,21 @@ describe("Categories (e2e)", () => {
     await admin.patch("/admin/categories/does-not-exist").send({ nameMy: "x" }).expect(404);
   });
 
-  it("blocks deletion while a place uses the category, then allows it", async () => {
-    const place = await admin
-      .post("/admin/places")
-      .send({ nameMy: `Category Test Place ${tag}`, categoryId })
-      .expect(201);
-    const placeId = (place.body as { id: string }).id;
-    createdPlaceIds.push(placeId);
+  it("blocks deletion while a product uses the category, then allows it", async () => {
+    const product = await db.product.create({
+      data: {
+        shopId,
+        categoryId,
+        nameEn: `Category Test Product ${tag}`,
+        slug: `category-test-prod-${tag}`,
+        priceMMK: 1500,
+      },
+    });
+    createdProductIds.push(product.id);
 
     await admin.delete(`/admin/categories/${categoryId}`).expect(400);
 
-    await admin.delete(`/admin/places/${placeId}`).expect(200);
+    await db.product.delete({ where: { id: product.id } });
     await admin.delete(`/admin/categories/${categoryId}`).expect(200);
   });
 

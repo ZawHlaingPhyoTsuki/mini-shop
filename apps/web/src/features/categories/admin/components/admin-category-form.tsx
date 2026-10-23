@@ -29,18 +29,32 @@ export function AdminCategoryForm({
   const form = useForm({
     defaultValues: {
       slug: category?.slug ?? "",
-      nameMy: category?.nameMy ?? "",
       nameEn: category?.nameEn ?? "",
+      nameMy: category?.nameMy ?? "",
+      sortOrder: category?.sortOrder !== undefined ? String(category.sortOrder) : "0",
+      isActive: category?.isActive ?? true,
     } satisfies CategoryFormValues,
     validators: { onSubmit: categoryFormSchema },
     onSubmit: async ({ value }) => {
       setError(null);
       setIsSaving(true);
-      const nameEn = toOptional(value.nameEn);
+      const nameMy = toOptional(value.nameMy);
+      const sortOrder = value.sortOrder ? parseInt(value.sortOrder, 10) : 0;
       try {
         const saved = category
-          ? await updateCategory(category.id, { nameMy: value.nameMy.trim(), nameEn })
-          : await createCategory({ slug: value.slug.trim(), nameMy: value.nameMy.trim(), nameEn });
+          ? await updateCategory(category.id, {
+              nameEn: value.nameEn.trim(),
+              nameMy,
+              sortOrder,
+              isActive: value.isActive,
+            })
+          : await createCategory({
+              slug: value.slug.trim(),
+              nameEn: value.nameEn.trim(),
+              nameMy,
+              sortOrder,
+              isActive: value.isActive,
+            });
         onSaved(saved);
       } catch (requestError) {
         setError(
@@ -83,14 +97,24 @@ export function AdminCategoryForm({
             )}
           </form.Field>
         )}
+        <form.Field name="nameEn">
+          {(field) => (
+            <FormTextField id="nameEn" label={t.adminCategoryForm.nameEn} field={field} />
+          )}
+        </form.Field>
         <form.Field name="nameMy">
           {(field) => (
             <FormTextField id="nameMy" label={t.adminCategoryForm.nameMy} field={field} />
           )}
         </form.Field>
-        <form.Field name="nameEn">
+        <form.Field name="sortOrder">
           {(field) => (
-            <FormTextField id="nameEn" label={t.adminCategoryForm.nameEn} field={field} />
+            <FormTextField
+              id="sortOrder"
+              label={t.adminCategoryForm.sortOrder}
+              placeholder={t.adminCategoryForm.sortOrderPlaceholder}
+              field={field}
+            />
           )}
         </form.Field>
         {error ? (

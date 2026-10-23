@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { Store } from "lucide-react";
 
 import { getDictionary } from "@/i18n/get-dictionary";
 
@@ -13,7 +13,7 @@ export async function PublicFooter() {
         <div className="max-w-xs space-y-2">
           <Link href="/" className="flex items-center gap-2 font-heading text-lg font-semibold">
             <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
-              <MapPin className="size-3.5" aria-hidden />
+              <Store className="size-3.5" aria-hidden />
             </span>
             {t.brand}
           </Link>
@@ -26,8 +26,11 @@ export async function PublicFooter() {
           className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:gap-6"
           aria-label={t.nav.footer}
         >
-          <Link href="/map" className={linkClass}>
-            {t.nav.map}
+          <Link href="/" className={linkClass}>
+            {t.nav.browse}
+          </Link>
+          <Link href="/dashboard/shop" className={linkClass}>
+            {t.nav.sell}
           </Link>
           <Link href="/about" className={linkClass}>
             {t.nav.about}

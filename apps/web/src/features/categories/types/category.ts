@@ -1,10 +1,12 @@
 export type Category = {
   id: string;
   slug: string;
-  nameMy: string;
-  nameEn: string | null;
+  nameEn: string;
+  nameMy: string | null;
+  sortOrder: number;
+  isActive: boolean;
 };
 
 export type AdminCategory = Category & {
-  placeCount: number;
+  productCount: number;
 };
