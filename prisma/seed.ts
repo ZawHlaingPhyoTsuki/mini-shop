@@ -1,31 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/services";
-import type { CustomerAddress, Shop } from "@/generated/prisma/client";
 
 type Role = "admin" | "shop_owner" | "customer";
+
+console.time("seed");
 
 // ---------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------
-
-// Idempotent: reuses the user if the email already exists.
-async function ensureUser(data: { name: string; email: string; password: string; role: Role }) {
-  let user = await prisma.user.findUnique({ where: { email: data.email } });
-
-  if (!user) {
-    const result = await auth.api.signUpEmail({
-      body: { name: data.name, email: data.email, password: data.password },
-    });
-    user = await prisma.user.findUniqueOrThrow({ where: { id: result.user.id } });
-  }
-
-  // `role` has input:false, so set it directly. Auto-verify for easy testing.
-  return prisma.user.update({
-    where: { id: user.id },
-    data: { role: data.role, emailVerified: true, name: data.name },
-  });
-}
-
 const slugify = (s: string) =>
   s
     .toLowerCase()
@@ -39,20 +22,17 @@ function at<T>(arr: readonly T[], i: number): T {
   return v;
 }
 
-type DbUser = Awaited<ReturnType<typeof ensureUser>>;
+function must<K, V>(map: Map<K, V>, key: K): V {
+  const v = map.get(key);
+  if (v === undefined) throw new Error(`Seed lookup failed for ${String(key)}`);
+  return v;
+}
 
 const PASSWORD = "password123";
 
 // ---------------------------------------------------------------
-// Users
+// Seed data
 // ---------------------------------------------------------------
-await ensureUser({
-  name: "Admin User",
-  email: "admin@example.com",
-  password: PASSWORD,
-  role: "admin",
-});
-
 const shopDefs = [
   {
     name: "Yangon Market",
@@ -326,37 +306,8 @@ const shopDefs = [
   },
 ] as const;
 
-// One owner per shop (Shop.ownerUserId is @unique).
-const owners: DbUser[] = [];
-for (const [i, def] of shopDefs.entries()) {
-  owners.push(
-    await ensureUser({
-      name: `${def.name} Owner`,
-      email: `owner${i + 1}@example.com`,
-      password: PASSWORD,
-      role: "shop_owner",
-    }),
-  );
-}
-
 const customerNames = ["Aung Aung", "Thida Win", "Min Thu", "Su Su Hlaing", "Kyaw Zin"];
-const customers: DbUser[] = [];
-for (const [i, name] of customerNames.entries()) {
-  customers.push(
-    await ensureUser({
-      name,
-      // first one keeps the original email
-      email: i === 0 ? "customer@example.com" : `customer${i + 1}@example.com`,
-      password: PASSWORD,
-      role: "customer",
-    }),
-  );
-}
-console.log(`✅ Users seeded (${1 + owners.length + customers.length})`);
 
-// ---------------------------------------------------------------
-// Categories
-// ---------------------------------------------------------------
 const categoryDefs = [
   { slug: "fashion", nameEn: "Fashion", nameMy: "ဖက်ရှင်" },
   { slug: "food", nameEn: "Food", nameMy: "အစားအစာ" },
@@ -366,118 +317,6 @@ const categoryDefs = [
   { slug: "crafts", nameEn: "Crafts", nameMy: "လက်မှုပစ္စည်း" },
 ];
 
-const categoryIds = new Map<string, string>();
-for (const [i, c] of categoryDefs.entries()) {
-  const cat = await prisma.category.upsert({
-    where: { slug: c.slug },
-    update: { nameEn: c.nameEn, nameMy: c.nameMy, sortOrder: i, isActive: true },
-    create: { ...c, sortOrder: i, isActive: true },
-  });
-  categoryIds.set(c.slug, cat.id);
-}
-console.log("✅ Categories seeded");
-
-// ---------------------------------------------------------------
-// Shops, products, assets, product images
-// ---------------------------------------------------------------
-type SeededProduct = {
-  id: string;
-  shopId: string;
-  nameEn: string;
-  nameMy: string | null;
-  slug: string;
-  priceMMK: number;
-  status: string;
-};
-
-const shops: Shop[] = [];
-const allProducts: SeededProduct[] = [];
-
-for (const [i, def] of shopDefs.entries()) {
-  const owner = at(owners, i);
-  const slug = slugify(def.name);
-
-  const shop = await prisma.shop.upsert({
-    where: { slug },
-    update: {},
-    create: {
-      ownerUserId: owner.id,
-      name: def.name,
-      slug,
-      descriptionEn: def.descEn,
-      descriptionMy: def.descMy,
-      contactPhone: def.phone,
-      socialLinks: { facebook: `https://facebook.com/${slug}`, viber: def.phone },
-      status: def.status,
-      ...(def.status === "ACTIVE" || def.status === "SUSPENDED"
-        ? { reviewedAt: new Date(), reviewNote: "Approved (seed)" }
-        : {}),
-    },
-  });
-  shops.push(shop);
-
-  for (const p of def.products) {
-    const pSlug = slugify(p.en);
-    const status = ("status" in p ? p.status : "PUBLISHED") as
-      | "PUBLISHED"
-      | "DRAFT"
-      | "ARCHIVED"
-      | "HIDDEN";
-
-    const data = {
-      categoryId: categoryIds.get(p.cat)!,
-      nameEn: p.en,
-      nameMy: p.my,
-      descriptionEn: p.desc,
-      priceMMK: p.mmk,
-      priceTHB: p.mmk >= 10000 ? Math.round(p.mmk / 60) : null, // rough, just demo data
-      status,
-      publishedAt: status === "PUBLISHED" ? new Date() : null,
-      stockQuantity: status === "PUBLISHED" ? 50 : null,
-      // Full slug keeps SKUs unique per shop (@@unique([shopId, sku])).
-      sku: `${slug.slice(0, 3).toUpperCase()}-${pSlug.toUpperCase()}`,
-    };
-
-    const product = await prisma.product.upsert({
-      where: { shopId_slug: { shopId: shop.id, slug: pSlug } },
-      update: data,
-      create: { shopId: shop.id, slug: pSlug, ...data },
-    });
-
-    allProducts.push({
-      id: product.id,
-      shopId: shop.id,
-      nameEn: product.nameEn,
-      nameMy: product.nameMy,
-      slug: product.slug,
-      priceMMK: product.priceMMK,
-      status: product.status,
-    });
-
-    // Placeholder asset + image (files don't need to exist in storage).
-    const asset = await prisma.asset.upsert({
-      where: { bucket_key: { bucket: "mini-shop", key: `seed/${slug}/${pSlug}.jpg` } },
-      update: {},
-      create: {
-        userId: owner.id,
-        bucket: "mini-shop",
-        key: `seed/${slug}/${pSlug}.jpg`,
-        contentType: "image/jpeg",
-        size: 102400,
-      },
-    });
-    await prisma.productImage.upsert({
-      where: { productId_assetId: { productId: product.id, assetId: asset.id } },
-      update: {},
-      create: { productId: product.id, assetId: asset.id, altText: p.en, sortOrder: 0 },
-    });
-  }
-}
-console.log(`✅ Shops (${shops.length}) and products (${allProducts.length}) seeded`);
-
-// ---------------------------------------------------------------
-// Customer addresses
-// ---------------------------------------------------------------
 const cities = [
   { region: "Yangon", city: "Sanchaung" },
   { region: "Yangon", city: "Hlaing" },
@@ -486,37 +325,257 @@ const cities = [
   { region: "Shan", city: "Taunggyi" },
 ];
 
-const addresses: CustomerAddress[] = [];
-for (const [i, c] of customers.entries()) {
-  const loc = at(cities, i);
-  const existing = await prisma.customerAddress.findFirst({
-    where: { userId: c.id, isDefault: true },
-  });
-  addresses.push(
-    existing ??
-      (await prisma.customerAddress.create({
-        data: {
-          userId: c.id,
-          label: "Home",
-          recipientName: c.name,
-          phone: `+95 9 100 000 0${i}${i}`,
-          countryCode: "MM",
-          region: loc.region,
-          city: loc.city,
-          addressLine1: `No. ${10 + i}, Main Road`,
-          postalCode: `1${i}001`,
-          deliveryInstructions: "Call before delivery",
-          isDefault: true,
-        },
-      })),
-  );
-}
+const ownerEmails = shopDefs.map((_, i) => `owner${i + 1}@example.com`);
+const customerEmails = customerNames.map((_, i) =>
+  i === 0 ? "customer@example.com" : `customer${i + 1}@example.com`,
+);
+
+const userDefs = [
+  { name: "Admin User", email: "admin@example.com", role: "admin" as Role },
+  ...shopDefs.map((d, i) => ({
+    name: `${d.name} Owner`,
+    email: at(ownerEmails, i),
+    role: "shop_owner" as Role,
+  })),
+  ...customerNames.map((name, i) => ({
+    name,
+    email: at(customerEmails, i),
+    role: "customer" as Role,
+  })),
+];
+
+// ---------------------------------------------------------------
+// Users
+// Hash the password ONCE and insert users + credential accounts in
+// bulk (same result as signUpEmail, without N slow hashes/queries).
+// ---------------------------------------------------------------
+const authCtx = await auth.$context;
+const passwordHash = await authCtx.password.hash(PASSWORD);
+
+await prisma.user.createMany({
+  data: userDefs.map((u) => ({
+    id: randomUUID(),
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    emailVerified: true,
+  })),
+  skipDuplicates: true,
+});
+
+const users = await prisma.user.findMany({
+  where: { email: { in: userDefs.map((u) => u.email) } },
+});
+const userByEmail = new Map(users.map((u) => [u.email, u]));
+
+const usersWithAccount = new Set(
+  (
+    await prisma.account.findMany({
+      where: { userId: { in: users.map((u) => u.id) }, providerId: "credential" },
+      select: { userId: true },
+    })
+  ).map((a) => a.userId),
+);
+
+await prisma.account.createMany({
+  data: users
+    .filter((u) => !usersWithAccount.has(u.id))
+    .map((u) => ({
+      id: randomUUID(),
+      userId: u.id,
+      accountId: u.id,
+      providerId: "credential",
+      password: passwordHash,
+    })),
+  skipDuplicates: true,
+});
+
+// Make sure roles/verification are right for pre-existing users too.
+await Promise.all(
+  (["admin", "shop_owner", "customer"] as const).map((role) =>
+    prisma.user.updateMany({
+      where: { email: { in: userDefs.filter((u) => u.role === role).map((u) => u.email) } },
+      data: { role, emailVerified: true },
+    }),
+  ),
+);
+
+const owners = ownerEmails.map((e) => must(userByEmail, e));
+const customers = customerEmails.map((e) => must(userByEmail, e));
+console.log(`✅ Users seeded (${users.length})`);
+
+// ---------------------------------------------------------------
+// Categories
+// ---------------------------------------------------------------
+await prisma.category.createMany({
+  data: categoryDefs.map((c, i) => ({ ...c, sortOrder: i, isActive: true })),
+  skipDuplicates: true,
+});
+const categoryIds = new Map(
+  (
+    await prisma.category.findMany({ where: { slug: { in: categoryDefs.map((c) => c.slug) } } })
+  ).map((c) => [c.slug, c.id]),
+);
+console.log("✅ Categories seeded");
+
+// ---------------------------------------------------------------
+// Shops
+// ---------------------------------------------------------------
+await prisma.shop.createMany({
+  data: shopDefs.map((def, i) => {
+    const slug = slugify(def.name);
+    const reviewed = def.status === "ACTIVE" || def.status === "SUSPENDED";
+    return {
+      ownerUserId: at(owners, i).id,
+      name: def.name,
+      slug,
+      descriptionEn: def.descEn,
+      descriptionMy: def.descMy,
+      contactPhone: def.phone,
+      socialLinks: { facebook: `https://facebook.com/${slug}`, viber: def.phone },
+      status: def.status,
+      reviewedAt: reviewed ? new Date() : null,
+      reviewNote: reviewed ? "Approved (seed)" : null,
+    };
+  }),
+  skipDuplicates: true,
+});
+
+const shopBySlug = new Map(
+  (
+    await prisma.shop.findMany({ where: { slug: { in: shopDefs.map((d) => slugify(d.name)) } } })
+  ).map((s) => [s.slug, s]),
+);
+const shops = shopDefs.map((d) => must(shopBySlug, slugify(d.name))); // same order as shopDefs
+const shopById = new Map(shops.map((s) => [s.id, s]));
+
+// ---------------------------------------------------------------
+// Products
+// ---------------------------------------------------------------
+await prisma.product.createMany({
+  data: shopDefs.flatMap((def) => {
+    const shop = must(shopBySlug, slugify(def.name));
+    return def.products.map((p) => {
+      const pSlug = slugify(p.en);
+      const status = ("status" in p ? p.status : "PUBLISHED") as
+        | "PUBLISHED"
+        | "DRAFT"
+        | "ARCHIVED"
+        | "HIDDEN";
+      return {
+        shopId: shop.id,
+        categoryId: must(categoryIds, p.cat),
+        nameEn: p.en,
+        nameMy: p.my,
+        descriptionEn: p.desc,
+        slug: pSlug,
+        priceMMK: p.mmk,
+        priceTHB: p.mmk >= 10000 ? Math.round(p.mmk / 60) : null, // rough, demo data
+        status,
+        publishedAt: status === "PUBLISHED" ? new Date() : null,
+        stockQuantity: status === "PUBLISHED" ? 50 : null,
+        sku: `${shop.slug.slice(0, 3).toUpperCase()}-${pSlug.toUpperCase()}`,
+      };
+    });
+  }),
+  skipDuplicates: true,
+});
+
+const allProducts = await prisma.product.findMany({
+  where: { shopId: { in: shops.map((s) => s.id) } },
+});
+const publishedProducts = allProducts.filter((p) => p.status === "PUBLISHED");
+console.log(`✅ Shops (${shops.length}) and products (${allProducts.length}) seeded`);
+
+// ---------------------------------------------------------------
+// Assets + product images (placeholder keys; files needn't exist)
+// ---------------------------------------------------------------
+const assetKey = (shopSlug: string, productSlug: string) => `seed/${shopSlug}/${productSlug}.jpg`;
+const BUCKET = "mini-shop";
+
+await prisma.asset.createMany({
+  data: allProducts.map((p) => {
+    const shop = must(shopById, p.shopId);
+    return {
+      userId: shop.ownerUserId,
+      bucket: BUCKET,
+      key: assetKey(shop.slug, p.slug),
+      contentType: "image/jpeg",
+      size: 102400,
+    };
+  }),
+  skipDuplicates: true,
+});
+
+const assetByKey = new Map(
+  (
+    await prisma.asset.findMany({
+      where: {
+        bucket: BUCKET,
+        key: { in: allProducts.map((p) => assetKey(must(shopById, p.shopId).slug, p.slug)) },
+      },
+    })
+  ).map((a) => [a.key, a]),
+);
+
+await prisma.productImage.createMany({
+  data: allProducts.map((p) => ({
+    productId: p.id,
+    assetId: must(assetByKey, assetKey(must(shopById, p.shopId).slug, p.slug)).id,
+    altText: p.nameEn,
+    sortOrder: 0,
+  })),
+  skipDuplicates: true,
+});
+console.log("✅ Assets & images seeded");
+
+// ---------------------------------------------------------------
+// Customer addresses (default address per customer)
+// ---------------------------------------------------------------
+const customerIds = customers.map((c) => c.id);
+const existingDefaults = new Set(
+  (
+    await prisma.customerAddress.findMany({
+      where: { userId: { in: customerIds }, isDefault: true },
+      select: { userId: true },
+    })
+  ).map((a) => a.userId),
+);
+
+await prisma.customerAddress.createMany({
+  data: customers.flatMap((c, i) => {
+    if (existingDefaults.has(c.id)) return [];
+    const loc = at(cities, i);
+    return [
+      {
+        userId: c.id,
+        label: "Home",
+        recipientName: c.name,
+        phone: `+95 9 100 000 0${i}${i}`,
+        countryCode: "MM",
+        region: loc.region,
+        city: loc.city,
+        addressLine1: `No. ${10 + i}, Main Road`,
+        postalCode: `1${i}001`,
+        deliveryInstructions: "Call before delivery",
+        isDefault: true,
+      },
+    ];
+  }),
+});
+
+const addressByUser = new Map(
+  (
+    await prisma.customerAddress.findMany({
+      where: { userId: { in: customerIds }, isDefault: true },
+    })
+  ).map((a) => [a.userId, a]),
+);
 console.log("✅ Addresses seeded");
 
 // ---------------------------------------------------------------
 // Likes
 // ---------------------------------------------------------------
-const publishedProducts = allProducts.filter((p) => p.status === "PUBLISHED");
 await prisma.productLike.createMany({
   data: customers.flatMap((c, ci) =>
     publishedProducts
@@ -535,34 +594,50 @@ const cart = await prisma.cart.upsert({
   update: {},
   create: { userId: at(customers, 0).id },
 });
-const cartShopProducts = publishedProducts.filter((p) => p.shopId === at(shops, 5).id).slice(0, 2);
+const cartShopId = at(shops, 5).id;
 await prisma.cartItem.createMany({
-  data: cartShopProducts.map((p, i) => ({ cartId: cart.id, productId: p.id, quantity: i + 1 })),
+  data: publishedProducts
+    .filter((p) => p.shopId === cartShopId)
+    .slice(0, 2)
+    .map((p, i) => ({ cartId: cart.id, productId: p.id, quantity: i + 1 })),
   skipDuplicates: true,
 });
 console.log("✅ Cart seeded");
 
 // ---------------------------------------------------------------
-// Orders (+ reviews for delivered ones)
+// Orders, order items, reviews — 3 bulk inserts total
 // ---------------------------------------------------------------
 const activeShops = shops.filter((s) => s.status === "ACTIVE");
 const statuses = ["DELIVERED", "SHIPPED", "PLACED", "CANCELLED", "CONFIRMED", "DELIVERED"] as const;
+const reviewComments = ["Great quality!", "Fast delivery, as described.", "Nice, would buy again."];
 
-let orderCounter = 0;
-for (const [ci, customer] of customers.entries()) {
-  const addr = at(addresses, ci);
+const existingOrderNumbers = new Set(
+  (
+    await prisma.order.findMany({
+      where: { orderNumber: { startsWith: "ORD-SEED-" } },
+      select: { orderNumber: true },
+    })
+  ).map((o) => o.orderNumber),
+);
 
-  // Each customer orders from 3 different active shops.
-  for (let k = 0; k < 3; k++) {
-    orderCounter++;
+const built = customers
+  .flatMap((customer, ci) =>
+    [0, 1, 2].map((k) => ({
+      customer,
+      ci,
+      k,
+      orderNumber: `ORD-SEED-${String(ci * 3 + k + 1).padStart(4, "0")}`,
+    })),
+  )
+  .filter((plan) => !existingOrderNumbers.has(plan.orderNumber))
+  .map(({ customer, ci, k, orderNumber }) => {
+    const addr = must(addressByUser, customer.id);
     const shop = at(activeShops, (ci + k) % activeShops.length);
     const status = at(statuses, (ci + k) % statuses.length);
-    const orderNumber = `ORD-SEED-${String(orderCounter).padStart(4, "0")}`;
 
-    if (await prisma.order.findUnique({ where: { orderNumber } })) continue;
-
-    const shopProducts = publishedProducts.filter((p) => p.shopId === shop.id);
-    const picked = shopProducts.slice(0, 1 + ((ci + k) % 3));
+    const picked = publishedProducts
+      .filter((p) => p.shopId === shop.id)
+      .slice(0, 1 + ((ci + k) % 3));
     const lines = picked.map((p, i) => {
       const quantity = 1 + ((ci + i) % 3);
       return { p, quantity, lineTotal: p.priceMMK * quantity };
@@ -570,16 +645,18 @@ for (const [ci, customer] of customers.entries()) {
     const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
     const shippingFee = 2000;
     const now = new Date();
+    const id = randomUUID();
 
-    const order = await prisma.order.create({
-      data: {
+    return {
+      order: {
+        id,
         orderNumber,
         userId: customer.id,
         shopId: shop.id,
         status,
-        paymentMethod: "COD",
-        paymentStatus: status === "DELIVERED" ? "PAID" : "UNPAID",
-        currency: "MMK",
+        paymentMethod: "COD" as const,
+        paymentStatus: (status === "DELIVERED" ? "PAID" : "UNPAID") as "PAID" | "UNPAID",
+        currency: "MMK" as const,
         subtotalAmount: subtotal,
         shippingFee,
         discountAmount: 0,
@@ -598,37 +675,37 @@ for (const [ci, customer] of customers.entries()) {
         shippedAt: status === "SHIPPED" || status === "DELIVERED" ? now : null,
         deliveredAt: status === "DELIVERED" ? now : null,
         cancelledAt: status === "CANCELLED" ? now : null,
-        items: {
-          create: lines.map((l) => ({
-            productId: l.p.id,
-            productNameEn: l.p.nameEn,
-            productNameMy: l.p.nameMy,
-            productSlug: l.p.slug,
-            unitPrice: l.p.priceMMK,
-            quantity: l.quantity,
-            lineTotal: l.lineTotal,
-          })),
-        },
       },
-    });
+      items: lines.map((l) => ({
+        orderId: id,
+        productId: l.p.id,
+        productNameEn: l.p.nameEn,
+        productNameMy: l.p.nameMy,
+        productSlug: l.p.slug,
+        unitPrice: l.p.priceMMK,
+        quantity: l.quantity,
+        lineTotal: l.lineTotal,
+      })),
+      reviews:
+        status === "DELIVERED"
+          ? lines.map((l, i) => ({
+              userId: customer.id,
+              productId: l.p.id,
+              rating: 3 + ((ci + i) % 3), // 3–5
+              comment: at(reviewComments, (ci + i) % reviewComments.length),
+              status: "APPROVED" as const,
+            }))
+          : [],
+    };
+  });
 
-    if (order.status === "DELIVERED") {
-      await prisma.productReview.createMany({
-        data: lines.map((l, i) => ({
-          userId: customer.id,
-          productId: l.p.id,
-          rating: 3 + ((ci + i) % 3), // 3–5
-          comment: at(
-            ["Great quality!", "Fast delivery, as described.", "Nice, would buy again."],
-            (ci + i) % 3,
-          ),
-          status: "APPROVED" as const,
-        })),
-        skipDuplicates: true,
-      });
-    }
-  }
-}
-console.log(`✅ Orders seeded (${orderCounter})`);
+await prisma.order.createMany({ data: built.map((b) => b.order) });
+await prisma.orderItem.createMany({ data: built.flatMap((b) => b.items) });
+await prisma.productReview.createMany({
+  data: built.flatMap((b) => b.reviews),
+  skipDuplicates: true,
+});
+console.log(`✅ Orders seeded (${built.length} new)`);
 
+console.timeEnd("seed");
 console.log("🌱 Seed finished");
