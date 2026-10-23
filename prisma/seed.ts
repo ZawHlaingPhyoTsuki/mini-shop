@@ -1,6 +1,6 @@
 import "varlock/auto-load";
 
-import { createDb } from "@/db";
+import { prisma } from "@/lib/prisma";
 import { localizedNamesSchema } from "@/domain/shared/locale";
 import { slugSchema } from "@/domain/shared/validation";
 import { ENV } from "@/env.server";
@@ -21,7 +21,7 @@ const categories = [
   },
   {
     slug: "electronics",
-    names: { en: "Electronics", my: "အီလက်ထရွန်နစ်" },
+    names: { en: "Electronics", my: "အီလက်ထရနစ်" },
     sortOrder: 40,
   },
   {
@@ -35,11 +35,9 @@ const categories = [
   slug: slugSchema.parse(row.slug),
 }));
 
-const db = createDb(ENV);
-
 try {
   for (const category of categories) {
-    await db.category.upsert({
+    await prisma.category.upsert({
       where: { slug: category.slug },
       update: {
         names: category.names,
@@ -57,5 +55,5 @@ try {
 
   console.log(`Seeded ${categories.length} categories.`);
 } finally {
-  await db.$disconnect();
+  await prisma.$disconnect();
 }

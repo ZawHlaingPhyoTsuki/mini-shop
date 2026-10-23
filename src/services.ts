@@ -1,9 +1,7 @@
 import "varlock/auto-load";
-
-import { createDb } from "@/db";
 import { createAuth } from "@/lib/auth";
-
+import { prisma } from "@/lib/prisma";
 import { ENV } from "./env.server";
 
-export const db = createDb(ENV);
-export const auth = createAuth(ENV, db);
+const auth = createAuth(ENV, prisma);
+export { prisma, auth };

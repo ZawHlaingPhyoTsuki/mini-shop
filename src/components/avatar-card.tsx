@@ -5,17 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MyAsset } from "@/functions/get-my-asset";
 
-type AssetResponse = {
-  asset: MyAsset | null;
-  error?: string;
-};
-
-type UploadTicket = {
-  key: string;
-  uploadUrl: string;
-  error?: string;
-};
-
 export default function AvatarCard({ asset }: { asset: MyAsset | null }) {
   const [url, setUrl] = useState<string | null>(asset?.url ?? null);
   const [isPending, setIsPending] = useState(false);
@@ -33,7 +22,11 @@ export default function AvatarCard({ asset }: { asset: MyAsset | null }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contentType: file.type, size: file.size }),
       });
-      const ticket = (await ticketResponse.json()) as UploadTicket;
+      const ticket = (await ticketResponse.json()) as {
+        key: string;
+        uploadUrl: string;
+        error?: string;
+      };
 
       if (!ticketResponse.ok) {
         toast.error(ticket.error ?? "Upload failed");
@@ -56,7 +49,10 @@ export default function AvatarCard({ asset }: { asset: MyAsset | null }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: ticket.key, contentType: file.type, size: file.size }),
       });
-      const data = (await response.json()) as AssetResponse;
+      const data = (await response.json()) as {
+        asset: MyAsset | null;
+        error?: string;
+      };
 
       if (!response.ok || !data.asset) {
         toast.error(data.error ?? "Upload failed");
@@ -87,7 +83,7 @@ export default function AvatarCard({ asset }: { asset: MyAsset | null }) {
         {url ? (
           <img src={url} alt="Your avatar" className="size-16 rounded-full border object-cover" />
         ) : (
-          <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-full border text-xs">
+          <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-full text-xs">
             None
           </div>
         )}

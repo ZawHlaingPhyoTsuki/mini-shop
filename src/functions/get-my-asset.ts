@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { publicAssetUrl } from "@/lib/storage";
 import { authMiddleware } from "@/middleware/auth";
-import { db } from "@/services";
+import { prisma } from "@/lib/prisma";
 
 export type MyAsset = {
   id: string;
@@ -24,7 +24,7 @@ export const getMyAsset = createServerFn({ method: "GET" })
       return null;
     }
 
-    const latest = await db.asset.findFirst({
+    const latest = await prisma.asset.findFirst({
       where: { userId },
       orderBy: { createdAt: "desc" },
       select: { id: true, key: true },
