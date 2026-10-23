@@ -5,8 +5,18 @@ pre-commit:
   parallel: true
   jobs:
     - name: oxlint
-      run: bun oxlint --fix {staged_files}
+      run: |
+        STAGED=$(git diff --cached --name-only)
+        EXISTS=$(echo "$STAGED" | grep -v '\.prisma$' | while read f; do [ -e "$f" ] && echo "$f"; done)
+        if [ -n "$EXISTS" ]; then
+          bun oxlint --fix $EXISTS
+        fi
       stage_fixed: true
     - name: oxfmt
-      run: bun oxfmt --write {staged_files}
+      run: |
+        STAGED=$(git diff --cached --name-only)
+        EXISTS=$(echo "$STAGED" | grep -v '\.prisma$' | while read f; do [ -e "$f" ] && echo "$f"; done)
+        if [ -n "$EXISTS" ]; then
+          bun oxfmt --write $EXISTS
+        fi
       stage_fixed: true
