@@ -432,11 +432,12 @@ Popular icon and component libraries can have **up to 10,000 re-exports** in the
 **Incorrect: imports entire library**
 
 ```tsx
-import { Button, TextField } from "@mui/material";
-// Loads 2,225 modules, takes ~4.2s extra in dev
+import { Check, X, Menu } from "lucide-react";
 // Loads 1,583 modules, takes ~2.8s extra in dev
 // Runtime cost: 200-800ms on every cold start
-import { Check, X, Menu } from "lucide-react";
+
+import { Button, TextField } from "@mui/material";
+// Loads 2,225 modules, takes ~4.2s extra in dev
 ```
 
 **Correct - Next.js 13.5+ (recommended):**
@@ -730,9 +731,8 @@ export async function deleteUser(userId: string) {
 ```typescript
 "use server";
 
-import { z } from "zod";
-
 import { verifySession } from "@/lib/auth";
+import { z } from "zod";
 
 const updateProfileSchema = z.object({
   userId: z.string().uuid(),
@@ -1293,9 +1293,8 @@ export async function POST(request: Request) {
 **Correct: non-blocking**
 
 ```tsx
-import { headers, cookies } from "next/headers";
 import { after } from "next/server";
-
+import { headers, cookies } from "next/headers";
 import { logUserAction } from "@/app/utils";
 
 export async function POST(request: Request) {

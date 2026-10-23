@@ -1,0 +1,79 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "test": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:push": {
+      "cache": false,
+      "interactive": true
+    },
+    "db:generate": {
+      "cache": false,
+      "interactive": false
+    },
+    "db:migrate": {
+      "cache": false,
+      "interactive": true
+    },
+    "db:seed": {
+      "cache": false,
+      "interactive": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:start": {
+      "cache": false
+    },
+    "db:stop": {
+      "cache": false
+    },
+    "db:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:down": {
+      "cache": false
+    }
+  },
+  "globalEnv": [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_ENDPOINT_URL_S3",
+    "AWS_REGION",
+    "AWS_SECRET_ACCESS_KEY",
+    "BETTER_AUTH_SECRET",
+    "CI",
+    "CORS_ORIGIN",
+    "DATABASE_URL",
+    "NEON_BUCKET_NAME",
+    "NODE_ENV",
+    "SERVER_URL",
+    "BETTER_AUTH_URL",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "VERCEL_URL",
+    "_VARLOCK_ENV_KEY"
+  ],
+  "globalDependencies": [".env*", "apps/*/.env*"]
+}

@@ -1,0 +1,48 @@
+# prod
+dist/
+build/
+out/
+src/generated/
+
+# dev
+.vscode/*
+!.vscode/launch.json
+!.vscode/*.code-snippets
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/shelf
+
+# deps
+node_modules/
+.pnp
+.pnp.*
+
+# test
+coverage/
+
+# env
+.env*
+!.env.example
+.dev.vars
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+
+# local db
+*.db*
+
+# typescript
+*.tsbuildinfo
+
+# varlock generated (see .env.schema)
+!.env.schema
+/src/env.ts

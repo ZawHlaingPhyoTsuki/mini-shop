@@ -1,37 +1,106 @@
-name: CI
+# PR checks: lint, format, types, and tests run in parallel; build is gated on all four.
+# No secrets required: .env stubs come from the committed .env.example files,
+# server tests mock Prisma/env, and `prisma generate` needs no live database.
+name: ci
 
 on:
   pull_request:
-  push:
-    branches: [dev, production]
+    branches: [dev, main]
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.head_ref }}
   cancel-in-progress: true
 
+# Stubs for required env vars that .env.example ships empty (never connected:
+# tests are mocked, generate/build touch no network). Obvious dummies, not secrets.
+env:
+  AWS_ENDPOINT_URL_S3: https://storage.ci.invalid
+  AWS_REGION: ap-southeast-1
+  AWS_ACCESS_KEY_ID: ci-stub
+  AWS_SECRET_ACCESS_KEY: ci-stub
+
 jobs:
-  verify:
+  lint:
+    name: lint
     runs-on: ubuntu-latest
-    env:
-      NODE_ENV: test
-      BETTER_AUTH_SECRET: ci-only-secret-with-at-least-32-characters
-      BETTER_AUTH_URL: http://localhost:3001
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mini_shop
-      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/mini_shop
-      AWS_ACCESS_KEY_ID: ci-access-key
-      AWS_SECRET_ACCESS_KEY: ci-secret-key
-      AWS_ENDPOINT_URL_S3: https://example.com
-      AWS_REGION: us-east-1
-      NEON_BUCKET_NAME: assets
-      NEON_BRANCH: test
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          bun-version: 1.3.5
+          node-version: 22
+          cache: pnpm
+      - run: cp apps/web/.env.example apps/web/.env && cp apps/server/.env.example apps/server/.env
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
 
-      - run: bun install --frozen-lockfile
-      - run: bun run check:ci
-      - run: bun run check-types
-      - run: bun run test
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: cp apps/web/.env.example apps/web/.env && cp apps/server/.env.example apps/server/.env
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format
+
+  types:
+    name: types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: cp apps/web/.env.example apps/web/.env && cp apps/server/.env.example apps/server/.env
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      # PageProps and other route types are generated into .next (gitignored),
+      # so a fresh checkout needs typegen before tsc can see them.
+      - run: pnpm --filter=web exec next typegen
+      - run: pnpm check-types
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: cp apps/web/.env.example apps/web/.env && cp apps/server/.env.example apps/server/.env
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm --filter=server test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, format, types, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: cp apps/web/.env.example apps/web/.env && cp apps/server/.env.example apps/server/.env
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm build

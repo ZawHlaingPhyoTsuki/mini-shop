@@ -1,6 +1,5 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": [".agents/**"],
   "plugins": ["typescript", "unicorn", "oxc"],
   "categories": {
     "correctness": "error"
@@ -8,5 +7,29 @@
   "rules": {},
   "env": {
     "builtin": true
-  }
+  },
+  "ignorePatterns": [
+    ".agents/",
+    ".claude/",
+    "apps/*/.next/",
+    "apps/server/src/generated/",
+    "apps/*/src/env.ts"
+  ],
+  "overrides": [
+    {
+      "files": ["apps/web/**/*"],
+      "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "jsx-a11y"],
+      "env": {
+        "builtin": true,
+        "browser": true
+      }
+    },
+    {
+      "files": ["apps/server/**/*"],
+      "env": {
+        "builtin": true,
+        "node": true
+      }
+    }
+  ]
 }

@@ -7,24 +7,15 @@ node_modules
 dist
 build
 *.tsbuildinfo
-.vinxi
-.output
-.react-router/
-.tanstack/
-.nitro/
 
 # Generated files
-src/routeTree.gen.ts
-src/env.ts
-src/generated/prisma
+apps/web/src/routeTree.gen.ts
 local.db
 local.db-*
 
 # Environment variables
 .env
-.env*
-!.env.example
-!.env.schema
+.env*.local
 
 # IDEs and editors
 .vscode/*

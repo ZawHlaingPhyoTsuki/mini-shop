@@ -19,7 +19,6 @@ Configure `emailVerification.sendVerificationEmail` to verify user email address
 
 ```ts
 import { betterAuth } from "better-auth";
-
 import { sendEmail } from "./email"; // your email sending function
 
 export const auth = betterAuth({
@@ -71,7 +70,6 @@ Provide `sendResetPassword` in the email and password config to enable password 
 
 ```ts
 import { betterAuth } from "better-auth";
-
 import { sendEmail } from "./email"; // your email sending function
 
 export const auth = betterAuth({
@@ -188,8 +186,8 @@ Default: `scrypt` (Node.js native, no external dependencies).
 To use Argon2id or another algorithm, provide custom `hash` and `verify` functions:
 
 ```ts
-import { hash, verify, type Options } from "@node-rs/argon2";
 import { betterAuth } from "better-auth";
+import { hash, verify, type Options } from "@node-rs/argon2";
 
 const argon2Options: Options = {
   memoryCost: 65536, // 64 MiB

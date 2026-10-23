@@ -1,0 +1,34 @@
+enum ShopStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+model Shop {
+  id               String     @id @default(uuid()) @db.Uuid
+  ownerUserId      String     @unique @map("owner_user_id")
+  name             String
+  slug             String     @unique
+  descriptionEn    String?    @map("description_en")
+  descriptionMy    String?    @map("description_my")
+  logoObjectKey    String?    @map("logo_object_key")
+  bannerObjectKey  String?    @map("banner_object_key")
+  contactPhone     String?    @map("contact_phone")
+  socialLinks      Json?      @map("social_links")
+  status           ShopStatus @default(DRAFT)
+  reviewNote       String?    @map("review_note")
+  reviewedAt       DateTime?  @map("reviewed_at") @db.Timestamptz(6)
+  reviewedByUserId String?    @map("reviewed_by_user_id")
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner    User      @relation(fields: [ownerUserId], references: [id], onDelete: Restrict)
+  reviewer User?     @relation("ShopReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  products Product[]
+  orders   Order[]
+
+  @@index([status, createdAt])
+  @@map("shop")
+}

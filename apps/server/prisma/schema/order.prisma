@@ -1,0 +1,96 @@
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PACKING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REJECTED
+  RETURNED
+}
+
+enum PaymentMethod {
+  COD
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id          String @id @default(uuid()) @db.Uuid
+  orderNumber String @unique @map("order_number")
+
+  userId String @map("user_id")
+  shopId String @map("shop_id") @db.Uuid
+
+  status        OrderStatus   @default(PLACED)
+  paymentMethod PaymentMethod @default(COD)
+  paymentStatus PaymentStatus @default(UNPAID)
+  currency      Currency
+
+  subtotalAmount Int @map("subtotal_amount")
+  shippingFee    Int @default(0) @map("shipping_fee")
+  discountAmount Int @default(0) @map("discount_amount")
+  totalAmount    Int @map("total_amount")
+
+  // Snapshot of the shipping address at checkout.
+  recipientName        String  @map("recipient_name")
+  recipientPhone       String  @map("recipient_phone")
+  shippingCountryCode  String  @default("MM") @map("shipping_country_code")
+  shippingRegion       String  @map("shipping_region")
+  shippingCity         String  @map("shipping_city")
+  shippingAddressLine1 String  @map("shipping_address_line_1")
+  shippingAddressLine2 String? @map("shipping_address_line_2")
+  shippingPostalCode   String? @map("shipping_postal_code")
+  deliveryInstructions String? @map("delivery_instructions")
+
+  customerNote String? @map("customer_note")
+  merchantNote String? @map("merchant_note")
+  cancelReason String? @map("cancel_reason")
+
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  shippedAt   DateTime? @map("shipped_at") @db.Timestamptz(6)
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(6)
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  shop     Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  items    OrderItem[]
+
+  @@index([userId, createdAt])
+  @@index([shopId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([paymentStatus])
+  @@map("customer_order")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  orderId   String  @map("order_id") @db.Uuid
+  productId String? @map("product_id") @db.Uuid
+
+  // Snapshot fields preserve order history if the product changes.
+  productNameEn String  @map("product_name_en")
+  productNameMy String? @map("product_name_my")
+  productSlug   String  @map("product_slug")
+
+  unitPrice Int @map("unit_price")
+  quantity  Int
+  lineTotal Int @map("line_total")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_item")
+}

@@ -32,9 +32,8 @@ export async function POST(request: Request) {
 **Correct (non-blocking):**
 
 ```tsx
-import { headers, cookies } from "next/headers";
 import { after } from "next/server";
-
+import { headers, cookies } from "next/headers";
 import { logUserAction } from "@/app/utils";
 
 export async function POST(request: Request) {

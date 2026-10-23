@@ -1,0 +1,137 @@
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  HIDDEN
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+enum Currency {
+  MMK
+  THB
+}
+
+model Product {
+  id         String  @id @default(uuid()) @db.Uuid
+  shopId     String  @map("shop_id") @db.Uuid
+  categoryId String? @map("category_id") @db.Uuid
+
+  nameEn        String  @map("name_en")
+  nameMy        String? @map("name_my")
+  descriptionEn String? @map("description_en")
+  descriptionMy String? @map("description_my")
+
+  slug        String
+  priceMMK    Int           @map("price_mmk")
+  priceTHB    Int?          @map("price_thb")
+  status      ProductStatus @default(DRAFT)
+  publishedAt DateTime?     @map("published_at") @db.Timestamptz(6)
+
+  // Optional inventory tracking.
+  // null means stock quantity is not being tracked.
+  stockQuantity Int?    @map("stock_quantity")
+  sku           String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop       Shop            @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  category   Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images     ProductImage[]
+  cartItems  CartItem[]
+  likes      ProductLike[]
+  reviews    ProductReview[]
+  orderItems OrderItem[]
+
+  @@unique([shopId, slug])
+  @@unique([shopId, sku])
+  @@index([shopId, status, createdAt])
+  @@index([categoryId, status])
+  @@index([status, publishedAt])
+  @@map("product")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  assetId   String   @map("asset_id") @db.Uuid
+  altText   String?  @map("alt_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  asset   Asset   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, assetId])
+  @@index([productId, sortOrder])
+  @@map("product_image")
+}
+
+model ProductLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id")
+  productId String   @map("product_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId, createdAt])
+  @@map("product_like")
+}
+
+model ProductReview {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @map("user_id")
+  productId String       @map("product_id") @db.Uuid
+  rating    Int
+  comment   String?
+  status    ReviewStatus @default(PENDING)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // One review per customer per product.
+  @@unique([userId, productId])
+  @@index([productId, status, createdAt])
+  @@index([userId])
+  @@map("product_review")
+}
+
+// --------------------------------------------------
+// CUSTOMER ADDRESSES
+// Reusable address book for checkout.
+// Orders separately snapshot the shipping address.
+// --------------------------------------------------
+
+model CustomerAddress {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @map("user_id")
+  label                String?
+  recipientName        String   @map("recipient_name")
+  phone                String
+  countryCode          String   @default("MM") @map("country_code")
+  region               String
+  city                 String
+  addressLine1         String   @map("address_line_1")
+  addressLine2         String?  @map("address_line_2")
+  postalCode           String?  @map("postal_code")
+  deliveryInstructions String?  @map("delivery_instructions")
+  isDefault            Boolean  @default(false) @map("is_default")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("customer_address")
+}

@@ -1,0 +1,16 @@
+model Asset {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id")
+  bucket      String
+  key         String
+  contentType String   @map("content_type")
+  size        Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productImages ProductImage[]
+
+  @@unique([bucket, key])
+  @@index([userId])
+  @@map("asset")
+}
