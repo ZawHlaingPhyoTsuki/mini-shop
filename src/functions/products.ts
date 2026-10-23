@@ -1,20 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
-import { db } from "@/services";
-import { localizedName } from "@/domain/shared/locale";
 import { formatMoney } from "@/domain/shared/money";
+import { prisma } from "@/lib/prisma";
 
-export const getProductBySlug = createServerFn({ method: "GET" }).handler(
-  async (context: unknown, slug: string) => {
-    const product = await db.product.findFirst({
-      where: { slug },
+export const getProductBySlug = createServerFn({ method: "GET" })
+  .validator(z.object({ slug: z.string() }))
+  .handler(async ({ data }) => {
+    const product = await prisma.product.findFirst({
+      where: { slug: data.slug, status: "PUBLISHED" },
       select: {
         id: true,
-        name: true,
+        nameEn: true,
+        nameMy: true,
         slug: true,
-        description: true,
-        priceAmount: true,
-        currency: true,
+        descriptionEn: true,
+        descriptionMy: true,
+        priceMMK: true,
+        priceTHB: true,
         status: true,
         publishedAt: true,
         createdAt: true,
@@ -30,7 +33,8 @@ export const getProductBySlug = createServerFn({ method: "GET" }).handler(
           select: {
             id: true,
             slug: true,
-            names: true,
+            nameEn: true,
+            nameMy: true,
             isActive: true,
             sortOrder: true,
           },
@@ -42,23 +46,10 @@ export const getProductBySlug = createServerFn({ method: "GET" }).handler(
       return { error: "Product not found" };
     }
 
-    const displayName = localizedName(product.names, "en");
-
     return {
       product: {
-        id: product.id,
-        name: displayName,
-        slug: product.slug,
-        description: product.description,
-        price: formatMoney({ amount: product.priceAmount, currency: product.currency }, "en"),
-        currency: product.currency,
-        status: product.status,
-        publishedAt: product.publishedAt,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-        shop: product.shop,
-        category: product.category,
+        ...product,
+        price: formatMoney({ amount: product.priceMMK, currency: "MMK" }),
       },
     };
-  },
-);
+  });

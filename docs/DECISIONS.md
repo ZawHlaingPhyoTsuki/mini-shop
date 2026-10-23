@@ -170,3 +170,53 @@ stay in one place. Migrations always use `DATABASE_URL_UNPOOLED`;
 The existing Neon databases were reset and rebuilt from a single baseline
 migration because the data was disposable. Production is migrated the same way
 once the Prisma switch is verified.
+
+### D-021: Global auth roles are `admin` and `customer`
+
+**Status:** Accepted
+
+Better Auth's admin plugin handles platform administration only. Its global
+roles are `admin` and `customer`; new accounts default to `customer`. The
+`adminRoles` option is `["admin"]`, so no other role receives user or session
+administration permissions.
+
+"Shop owner" is not a global auth role. Merchant authority is derived from the
+`Shop.ownerUserId` relationship plus the shop's status, checked server-side on
+every merchant operation (`isShopOwner` / `requireShopOwner`). A user who owns a
+shop therefore gains no platform-admin capability, and revoking shop access does
+not require changing an auth role. Platform-admin checks use the separate
+`isAdmin` / `requireAdmin` helpers. Never trust a role, user ID, or shop ID sent
+by the client.
+
+### D-022: Shop onboarding requires admin approval
+
+**Status:** Accepted
+
+A user may own at most one shop (`Shop.ownerUserId` is unique). Creating a shop
+sets `PENDING_REVIEW` directly; an admin reviews it from `/admin/shops` and
+either activates it or rejects it. Rejection moves the shop to `DRAFT`, stores
+`reviewNote`, `reviewedAt`, and `reviewedByUserId`, and lets the owner edit and
+resubmit. Approval stores the same audit fields and clears the note.
+
+Status changes are validated in `src/features/shops/status.ts`. Owners may only
+move `DRAFT -> PENDING_REVIEW`; only admin review may set `ACTIVE` (or return a
+pending shop to `DRAFT`). Storefront reads require `ACTIVE`. Admin checks come
+from the global auth role, never from shop ownership.
+
+The current phase applies schema changes with `prisma db push` and does not keep
+a `prisma/migrations/` directory. This supersedes the migrations-folder detail in
+D-020 for the current development phase; add versioned migrations before
+production deployment.
+
+### D-023: Feature-first module layout
+
+**Status:** Accepted
+
+Domain code is organized by feature under `src/features/<name>`. A feature owns
+its components, server functions, schemas, and rules so a change stays local;
+routes compose features and stay thin. The shop feature lives at
+`src/features/shops` (`components/`, `server.ts`, `schema.ts`, `status.ts`).
+
+`src/components`, `src/domain`, `src/functions`, and `src/lib` hold only
+cross-feature code. New domains add a sibling feature folder rather than growing
+the shared folders. Import feature modules directly; do not add barrel files.

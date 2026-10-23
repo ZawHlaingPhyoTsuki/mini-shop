@@ -18,6 +18,7 @@ Use a modular monolith: one TanStack Start application, one primary Postgres dat
 - Shop creation and profile editing.
 - Public storefront lookup by slug.
 - Shop publication, suspension, and moderation state.
+- Admin shop review queue with approve/reject actions and review notes.
 - Shop-owner or member authorization.
 
 ### Catalog

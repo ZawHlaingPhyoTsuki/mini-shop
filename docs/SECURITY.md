@@ -14,6 +14,12 @@ Suggested application roles:
 
 Do not trust a role or user ID sent in a request body. Resolve the current actor from the verified server session.
 
+Implemented guards: `isAdmin` / `requireAdmin` read the global Better Auth role
+(`admin` or `customer`), while `isShopOwner` / `requireShopOwner` check the
+`Shop.ownerUserId` relationship. Shop review and other platform moderation use
+`requireAdmin`; owning a shop never satisfies an admin check. Admin route
+guards are UX only, so every server function repeats the check.
+
 ## 2. Authorization matrix
 
 | Action                    |         Public visitor |      Customer |                           Authorized shop manager |                     Admin |
@@ -25,6 +31,7 @@ Do not trust a role or user ID sent in a request body. Resolve the current actor
 | Create/edit shop          |                     No | Eligible user |                                     Yes, own shop | Yes, where policy permits |
 | Create/edit product       |                     No |            No |                                     Yes, own shop |       Yes, for moderation |
 | View shop orders          |                     No |            No |                                Yes, own shop only |               As required |
+| Review/approve a shop     |                     No |            No |                                                No |                       Yes |
 | Moderate any listing      |                     No |            No |                                                No |                       Yes |
 | Manage categories         |                     No |            No |                                                No |                       Yes |
 

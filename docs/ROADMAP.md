@@ -22,11 +22,11 @@ This roadmap prioritizes a working product-discovery and COD workflow before adv
 - [ ] Product search and basic sorting.
 - [ ] Product detail page with localized names and MMK/THB pricing.
 - [ ] Public merchant storefront.
-- [ ] Merchant account/shop creation.
+- [x] Merchant account/shop creation (one shop per user, submitted for admin review).
 - [ ] Product create/edit/archive with explicit currency.
 - [ ] Product image upload and display.
 - [ ] Shop/product publication rules.
-- [ ] Minimal admin moderation.
+- [x] Minimal admin moderation (shop approval/rejection queue).
 
 **Exit criteria:** A merchant can publish a shop and products; a visitor can find and share those products without logging in.
 

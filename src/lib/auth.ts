@@ -1,7 +1,11 @@
+import "varlock/auto-load";
+import { ENV } from "@/env.server";
+
 import type { PrismaClient } from "@/generated/prisma/client";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { prisma } from "./prisma";
 
 export type AuthConfig = {
   BETTER_AUTH_URL: string;
@@ -17,6 +21,14 @@ export function createAuth(env: AuthConfig, database: PrismaClient) {
 
   return betterAuth({
     database: prismaAdapter(database, { provider: "postgresql" }),
+    user: {
+      additionalFields: {
+        role: {
+          type: "string",
+          input: false,
+        },
+      },
+    },
     emailAndPassword: { enabled: true },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: {
@@ -29,4 +41,5 @@ export function createAuth(env: AuthConfig, database: PrismaClient) {
   });
 }
 
+export const auth = createAuth(ENV, prisma);
 export type Session = ReturnType<typeof createAuth>["$Infer"]["Session"];

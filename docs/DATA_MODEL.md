@@ -10,29 +10,32 @@ Use the tables required by the installed Better Auth configuration and Prisma ad
 
 ### Shop membership
 
-For the simplest MVP, each shop can have one owner referenced by `ownerUserId`. If collaboration is required, introduce `ShopMember` with `shopId`, `userId`, role, and membership status. Do not assume a user's session grants shop access.
+Each user may own at most one shop, enforced by the unique `Shop.ownerUserId`. If collaboration is required, introduce `ShopMember` with `shopId`, `userId`, role, and membership status. Do not assume a user's session grants shop access. Owning a shop does not grant the global `admin` role.
 
 ## 2. Shop
 
-Suggested fields:
+Implemented fields:
 
 - `id`
-- `ownerUserId`
+- `ownerUserId` (unique)
 - `name`
 - `slug` (unique)
-- `description`
+- `descriptionEn`, `descriptionMy` (nullable)
 - `logoObjectKey` (nullable)
 - `bannerObjectKey` (nullable)
 - `contactPhone` (nullable)
 - `socialLinks` (structured JSON or normalized table)
-- `status` (`draft`, `pending_review`, `active`, `suspended`, `closed`)
+- `status` (`DRAFT`, `PENDING_REVIEW`, `ACTIVE`, `SUSPENDED`, `CLOSED`)
+- `reviewNote`, `reviewedAt`, `reviewedByUserId` (nullable review audit fields)
 - `createdAt`
 - `updatedAt`
 
 Rules:
 
-- Slugs must be unique.
-- Only authorized owners/members may edit the shop.
+- Slugs must be unique and one user may own only one shop.
+- A shop is created in `PENDING_REVIEW`; only an admin review may set `ACTIVE`.
+- Rejection sets `DRAFT` plus `reviewNote`, `reviewedAt`, and `reviewedByUserId`; the owner edits and resubmits.
+- Only the owner (resolved from `ownerUserId`) may edit the shop.
 - Public storefronts require an eligible shop status.
 - A suspended shop's products must not appear in public search.
 
@@ -41,15 +44,16 @@ Rules:
 Implemented fields:
 
 - `id`
-- `names` (JSONB localized map; English required, Myanmar optional)
+- `nameEn` (required), `nameMy` (nullable)
 - `slug` (unique)
 - `sortOrder`
 - `isActive`
 - `createdAt`
 - `updatedAt`
 
-Example: `{ "en": "Fashion", "my": "ဖက်ရှင်" }`. English is the fallback
-locale. Add Shan and other locales to the map later without adding columns.
+English is required and is the fallback locale. The current schema uses
+`name_en` / `name_my` columns rather than a JSON map; add further locales with
+an explicit schema change when Shan support is scheduled.
 
 Categories are administered by the platform, not freely created by every merchant in the initial MVP.
 
@@ -60,11 +64,10 @@ Suggested fields:
 - `id`
 - `shopId`
 - `categoryId`
-- `names` (localized map, English required)
+- `nameEn` (required), `nameMy` (nullable)
 - `slug`
 - `description`
-- `priceAmount` (whole integer units for a simple fixed-price listing, or a minimum/starting price if variants can differ)
-- `currency` (`MMK` or `THB`)
+- `priceMMK` (whole Kyat), `priceTHB` (whole Baht, nullable)
 - `status` (`draft`, `published`, `archived`, `hidden`)
 - `createdAt`
 - `updatedAt`

@@ -52,3 +52,29 @@ export function requireShopOwner(userId: string, ownerUserId: string) {
     throw new AuthorizationError();
   }
 }
+
+/**
+ * Checks for the platform-admin role. Better Auth stores multiple roles as a
+ * comma-separated string, so check each entry rather than comparing the whole
+ * value.
+ */
+export function isAdmin(user: { role?: string | null }) {
+  return user.role?.split(",").some((role) => role.trim() === "admin") ?? false;
+}
+
+/**
+ * Throws unless the authenticated user is a platform admin. Shop ownership is
+ * a separate check (`requireShopOwner`) and never grants admin access.
+ *
+ * @param session Verified server session.
+ * @returns The authenticated admin user.
+ */
+export function requireAdmin(session: Session | null): SessionUser {
+  const user = requireUser(session);
+
+  if (!isAdmin(user)) {
+    throw new AuthorizationError();
+  }
+
+  return user;
+}

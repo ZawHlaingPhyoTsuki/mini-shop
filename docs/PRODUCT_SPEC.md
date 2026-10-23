@@ -82,8 +82,10 @@ Customer accounts, saved favorites, and convenient order history can be introduc
 
 - Authenticated user can create a shop.
 - Shop has a unique public slug.
-- Shop has localized names (English and Myanmar initially), description, optional logo/banner, and contact/social links.
+- Shop has a name, localized description (English and Myanmar initially), optional logo/banner, and contact/social links.
 - Shop publication or approval state is explicit.
+- A new shop is submitted for admin review (`PENDING_REVIEW`); only an admin may activate it.
+- A rejected shop returns to `DRAFT` with a review note so the owner can edit and resubmit.
 - Only authorized shop members can edit the shop.
 
 ### Product management
@@ -126,9 +128,9 @@ Customer accounts, saved favorites, and convenient order history can be introduc
 
 ### Shop
 
-Suggested states: `draft`, `pending_review`, `active`, `suspended`, `closed`.
+Implemented states: `DRAFT`, `PENDING_REVIEW`, `ACTIVE`, `SUSPENDED`, `CLOSED`.
 
-Whether approval is mandatory is a product decision. Keep the state model explicit so approval can be enabled without redesigning shop data.
+Approval is mandatory for the MVP (D-022). A shop starts in `PENDING_REVIEW` when created, becomes `ACTIVE` only through an admin approval, and returns to `DRAFT` on rejection. Owners may resubmit a draft; the allowed transitions live in `src/features/shops/status.ts`.
 
 ### Product
 

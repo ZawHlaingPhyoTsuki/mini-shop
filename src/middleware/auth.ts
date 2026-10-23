@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth } from "@/services";
 import { createMiddleware } from "@tanstack/react-start";
 
 /**

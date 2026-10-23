@@ -1,7 +1,5 @@
 import "varlock/auto-load";
-import { createAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ENV } from "./env.server";
+import { auth } from "@/lib/auth";
 
-const auth = createAuth(ENV, prisma);
 export { prisma, auth };
