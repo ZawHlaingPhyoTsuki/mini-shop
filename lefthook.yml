@@ -9,7 +9,7 @@ pre-commit:
         STAGED=$(git diff --cached --name-only)
         EXISTS=$(echo "$STAGED" | grep -v '\.prisma$' | while read f; do [ -e "$f" ] && echo "$f"; done)
         if [ -n "$EXISTS" ]; then
-          bun oxlint --fix $EXISTS
+          bun oxlint --fix --no-error-on-unmatched-pattern $EXISTS
         fi
       stage_fixed: true
     - name: oxfmt
@@ -17,6 +17,6 @@ pre-commit:
         STAGED=$(git diff --cached --name-only)
         EXISTS=$(echo "$STAGED" | grep -v '\.prisma$' | while read f; do [ -e "$f" ] && echo "$f"; done)
         if [ -n "$EXISTS" ]; then
-          bun oxfmt --write $EXISTS
+          bun oxfmt --write --no-error-on-unmatched-pattern $EXISTS
         fi
       stage_fixed: true
